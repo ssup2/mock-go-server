@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package mock;
+
+option go_package = "mock-go-server/proto";
+
+service MockService {
+  // Health check
+  rpc Health(Empty) returns (HealthResponse);
+  rpc Ready(Empty) returns (ReadyResponse);
+
+  // Return specific status code
+  rpc Status(StatusRequest) returns (StatusResponse);
+
+  // Delay response
+  rpc Delay(DelayRequest) returns (DelayResponse);
+
+  // Echo headers
+  rpc Headers(Empty) returns (HeadersResponse);
+
+  // Large response
+  rpc Large(LargeRequest) returns (LargeResponse);
+
+  // Echo request body
+  rpc Echo(EchoRequest) returns (EchoResponse);
+}
+
+message Empty {}
+
+message HealthResponse {
+  string status = 1;
+  string service = 2;
+}
+
+message ReadyResponse {
+  string status = 1;
+  string service = 2;
+}
+
+message StatusRequest {
+  int32 code = 1;
+}
+
+message StatusResponse {
+  int32 status_code = 1;
+  string service = 2;
+  string message = 3;
+}
+
+message DelayRequest {
+  int32 milliseconds = 1;
+}
+
+message DelayResponse {
+  string service = 1;
+  int32 delayed_ms = 2;
+  string message = 3;
+}
+
+message HeadersResponse {
+  string service = 1;
+  map<string, string> headers = 2;
+}
+
+message LargeRequest {
+  int32 size_kb = 1;
+}
+
+message LargeResponse {
+  bytes data = 1;
+}
+
+message EchoRequest {
+  bytes data = 1;
+}
+
+message EchoResponse {
+  bytes data = 1;
+}

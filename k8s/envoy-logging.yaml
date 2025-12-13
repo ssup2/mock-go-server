@@ -1,0 +1,117 @@
+# ===========================================
+# Enable Envoy Access Logging
+# ===========================================
+
+# Mesh-wide access logging configuration
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: access-log-format
+  namespace: istio-system
+spec:
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: ANY
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: MERGE
+      value:
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          access_log:
+          - name: envoy.access_loggers.file
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+              log_format:
+                json_format:
+                  start_time: "%START_TIME%"
+                  method: "%REQ(:METHOD)%"
+                  path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                  protocol: "%PROTOCOL%"
+                  response_code: "%RESPONSE_CODE%"
+                  response_flags: "%RESPONSE_FLAGS%"
+                  bytes_received: "%BYTES_RECEIVED%"
+                  bytes_sent: "%BYTES_SENT%"
+                  duration: "%DURATION%"
+                  upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+                  x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+                  user_agent: "%REQ(USER-AGENT)%"
+                  request_id: "%REQ(X-REQUEST-ID)%"
+                  authority: "%REQ(:AUTHORITY)%"
+                  upstream_host: "%UPSTREAM_HOST%"
+                  upstream_cluster: "%UPSTREAM_CLUSTER%"
+                  upstream_local_address: "%UPSTREAM_LOCAL_ADDRESS%"
+                  downstream_local_address: "%DOWNSTREAM_LOCAL_ADDRESS%"
+                  downstream_remote_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+                  route_name: "%ROUTE_NAME%"
+                  connection_termination_details: "%CONNECTION_TERMINATION_DETAILS%"
+---
+# Workload-specific access logging (mock-test namespace)
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: mock-server-access-log
+  namespace: mock-test
+spec:
+  workloadSelector:
+    labels:
+      app: mock-server
+  configPatches:
+  - applyTo: NETWORK_FILTER
+    match:
+      context: SIDECAR_INBOUND
+      listener:
+        filterChain:
+          filter:
+            name: "envoy.filters.network.http_connection_manager"
+    patch:
+      operation: MERGE
+      value:
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          access_log:
+          - name: envoy.access_loggers.file
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              path: /dev/stdout
+              log_format:
+                json_format:
+                  timestamp: "%START_TIME%"
+                  method: "%REQ(:METHOD)%"
+                  path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                  protocol: "%PROTOCOL%"
+                  response_code: "%RESPONSE_CODE%"
+                  response_flags: "%RESPONSE_FLAGS%"
+                  response_code_details: "%RESPONSE_CODE_DETAILS%"
+                  connection_termination_details: "%CONNECTION_TERMINATION_DETAILS%"
+                  bytes_received: "%BYTES_RECEIVED%"
+                  bytes_sent: "%BYTES_SENT%"
+                  duration_ms: "%DURATION%"
+                  upstream_service_time_ms: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+                  request_id: "%REQ(X-REQUEST-ID)%"
+                  authority: "%REQ(:AUTHORITY)%"
+                  upstream_host: "%UPSTREAM_HOST%"
+                  upstream_cluster: "%UPSTREAM_CLUSTER%"
+                  upstream_transport_failure_reason: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
+                  downstream_remote_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+                  x_b3_traceid: "%REQ(X-B3-TRACEID)%"
+                  x_b3_spanid: "%REQ(X-B3-SPANID)%"
+---
+# Telemetry API (Istio 1.12+) - Alternative way to configure access logging
+apiVersion: telemetry.istio.io/v1alpha1
+kind: Telemetry
+metadata:
+  name: mock-server-logging
+  namespace: mock-test
+spec:
+  selector:
+    matchLabels:
+      app: mock-server
+  accessLogging:
+  - providers:
+    - name: envoy
