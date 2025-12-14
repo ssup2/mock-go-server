@@ -34,6 +34,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/large", s.largeResponseHandler)
 	mux.HandleFunc("/panic", s.panicHandler)
 	mux.HandleFunc("/echo", s.echoHandler)
+	mux.HandleFunc("/disconnect", s.disconnectHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -77,6 +78,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/large?size=1000 - Large response (size in KB)",
 			"/panic - Trigger panic (crash)",
 			"/echo - Echo request body",
+			"/disconnect - Server closes connection first",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -200,6 +202,25 @@ func (s *Server) echoHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
+}
+
+func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[%s] Disconnecting client connection", s.ServiceName)
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Hijacking not supported",
+		})
+		return
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+	conn.Close()
 }
 
 func (s *Server) respondJSON(w http.ResponseWriter, status int, data interface{}) {

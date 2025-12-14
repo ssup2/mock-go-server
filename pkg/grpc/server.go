@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
 
@@ -153,4 +154,16 @@ func (s *Server) Echo(ctx context.Context, req *pb.EchoRequest) (*pb.EchoRespons
 	return &pb.EchoResponse{
 		Data: req.GetData(),
 	}, nil
+}
+
+func (s *Server) Disconnect(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
+	log.Printf("[%s] Disconnecting client connection", s.ServiceName)
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "failed to get peer info")
+	}
+	if conn, ok := p.Addr.(interface{ Close() error }); ok {
+		conn.Close()
+	}
+	return nil, status.Errorf(codes.Unavailable, "connection closed by server")
 }

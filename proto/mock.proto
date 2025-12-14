@@ -23,6 +23,9 @@ service MockService {
 
   // Echo request body
   rpc Echo(EchoRequest) returns (EchoResponse);
+
+  // Server closes connection first
+  rpc Disconnect(Empty) returns (Empty);
 }
 
 message Empty {}
