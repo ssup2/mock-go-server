@@ -34,7 +34,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/large", s.largeResponseHandler)
 	mux.HandleFunc("/panic", s.panicHandler)
 	mux.HandleFunc("/echo", s.echoHandler)
-	mux.HandleFunc("/disconnect", s.disconnectHandler)
+	mux.HandleFunc("/disconnect/", s.disconnectHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -78,7 +78,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/large?size=1000 - Large response (size in KB)",
 			"/panic - Trigger panic (crash)",
 			"/echo - Echo request body",
-			"/disconnect - Server closes connection first",
+			"/disconnect/{ms} - Server closes connection after delay",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -205,7 +205,18 @@ func (s *Server) echoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[%s] Disconnecting client connection", s.ServiceName)
+	msStr := r.URL.Path[len("/disconnect/"):]
+	ms, err := strconv.Atoi(msStr)
+	if err != nil || ms < 0 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid delay. Use /disconnect/{milliseconds}",
+		})
+		return
+	}
+
+	log.Printf("[%s] Disconnecting client connection after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		s.respondJSON(w, http.StatusInternalServerError, map[string]string{

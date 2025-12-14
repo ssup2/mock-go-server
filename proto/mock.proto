@@ -24,8 +24,12 @@ service MockService {
   // Echo request body
   rpc Echo(EchoRequest) returns (EchoResponse);
 
-  // Server closes connection first
-  rpc Disconnect(Empty) returns (Empty);
+  // Server closes connection after delay
+  rpc Disconnect(DisconnectRequest) returns (Empty);
+}
+
+message DisconnectRequest {
+  int32 milliseconds = 1;
 }
 
 message Empty {}

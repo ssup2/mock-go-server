@@ -46,8 +46,8 @@ type MockServiceClient interface {
 	Large(ctx context.Context, in *LargeRequest, opts ...grpc.CallOption) (*LargeResponse, error)
 	// Echo request body
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
-	// Server closes connection first
-	Disconnect(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	// Server closes connection after delay
+	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type mockServiceClient struct {
@@ -128,7 +128,7 @@ func (c *mockServiceClient) Echo(ctx context.Context, in *EchoRequest, opts ...g
 	return out, nil
 }
 
-func (c *mockServiceClient) Disconnect(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+func (c *mockServiceClient) Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, MockService_Disconnect_FullMethodName, in, out, cOpts...)
@@ -155,8 +155,8 @@ type MockServiceServer interface {
 	Large(context.Context, *LargeRequest) (*LargeResponse, error)
 	// Echo request body
 	Echo(context.Context, *EchoRequest) (*EchoResponse, error)
-	// Server closes connection first
-	Disconnect(context.Context, *Empty) (*Empty, error)
+	// Server closes connection after delay
+	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
 	mustEmbedUnimplementedMockServiceServer()
 }
 
@@ -188,7 +188,7 @@ func (UnimplementedMockServiceServer) Large(context.Context, *LargeRequest) (*La
 func (UnimplementedMockServiceServer) Echo(context.Context, *EchoRequest) (*EchoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Echo not implemented")
 }
-func (UnimplementedMockServiceServer) Disconnect(context.Context, *Empty) (*Empty, error) {
+func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Disconnect not implemented")
 }
 func (UnimplementedMockServiceServer) mustEmbedUnimplementedMockServiceServer() {}
@@ -339,7 +339,7 @@ func _MockService_Echo_Handler(srv interface{}, ctx context.Context, dec func(in
 }
 
 func _MockService_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+	in := new(DisconnectRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func _MockService_Disconnect_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: MockService_Disconnect_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Disconnect(ctx, req.(*Empty))
+		return srv.(MockServiceServer).Disconnect(ctx, req.(*DisconnectRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

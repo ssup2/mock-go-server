@@ -156,8 +156,15 @@ func (s *Server) Echo(ctx context.Context, req *pb.EchoRequest) (*pb.EchoRespons
 	}, nil
 }
 
-func (s *Server) Disconnect(ctx context.Context, req *pb.Empty) (*pb.Empty, error) {
-	log.Printf("[%s] Disconnecting client connection", s.ServiceName)
+func (s *Server) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Disconnecting client connection after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
