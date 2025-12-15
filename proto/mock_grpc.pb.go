@@ -27,6 +27,7 @@ const (
 	MockService_Large_FullMethodName      = "/mock.MockService/Large"
 	MockService_Echo_FullMethodName       = "/mock.MockService/Echo"
 	MockService_Disconnect_FullMethodName = "/mock.MockService/Disconnect"
+	MockService_Reset_FullMethodName      = "/mock.MockService/Reset"
 )
 
 // MockServiceClient is the client API for MockService service.
@@ -48,6 +49,8 @@ type MockServiceClient interface {
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
 	// Server closes connection after delay
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Send TCP RST after delay
+	Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type mockServiceClient struct {
@@ -138,6 +141,16 @@ func (c *mockServiceClient) Disconnect(ctx context.Context, in *DisconnectReques
 	return out, nil
 }
 
+func (c *mockServiceClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, MockService_Reset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MockServiceServer is the server API for MockService service.
 // All implementations must embed UnimplementedMockServiceServer
 // for forward compatibility.
@@ -157,6 +170,8 @@ type MockServiceServer interface {
 	Echo(context.Context, *EchoRequest) (*EchoResponse, error)
 	// Server closes connection after delay
 	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
+	// Send TCP RST after delay
+	Reset(context.Context, *ResetRequest) (*Empty, error)
 	mustEmbedUnimplementedMockServiceServer()
 }
 
@@ -190,6 +205,9 @@ func (UnimplementedMockServiceServer) Echo(context.Context, *EchoRequest) (*Echo
 }
 func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Disconnect not implemented")
+}
+func (UnimplementedMockServiceServer) Reset(context.Context, *ResetRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method Reset not implemented")
 }
 func (UnimplementedMockServiceServer) mustEmbedUnimplementedMockServiceServer() {}
 func (UnimplementedMockServiceServer) testEmbeddedByValue()                     {}
@@ -356,6 +374,24 @@ func _MockService_Disconnect_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _MockService_Reset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MockServiceServer).Reset(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MockService_Reset_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MockServiceServer).Reset(ctx, req.(*ResetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // MockService_ServiceDesc is the grpc.ServiceDesc for MockService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -394,6 +430,10 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Disconnect",
 			Handler:    _MockService_Disconnect_Handler,
+		},
+		{
+			MethodName: "Reset",
+			Handler:    _MockService_Reset_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

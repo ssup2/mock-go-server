@@ -26,6 +26,13 @@ service MockService {
 
   // Server closes connection after delay
   rpc Disconnect(DisconnectRequest) returns (Empty);
+
+  // Send TCP RST after delay
+  rpc Reset(ResetRequest) returns (Empty);
+}
+
+message ResetRequest {
+  int32 milliseconds = 1;
 }
 
 message DisconnectRequest {

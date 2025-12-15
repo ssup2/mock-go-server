@@ -21,6 +21,38 @@ type Server struct {
 	ServiceName string
 	Port        string
 	grpcServer  *grpc.Server
+	rstListener *RSTListener
+}
+
+type RSTListener struct {
+	net.Listener
+	conns map[string]net.Conn
+}
+
+func NewRSTListener(l net.Listener) *RSTListener {
+	return &RSTListener{
+		Listener: l,
+		conns:    make(map[string]net.Conn),
+	}
+}
+
+func (l *RSTListener) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	l.conns[conn.RemoteAddr().String()] = conn
+	return conn, nil
+}
+
+func (l *RSTListener) ResetConn(addr string) {
+	if conn, ok := l.conns[addr]; ok {
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			tcpConn.SetLinger(0)
+		}
+		conn.Close()
+		delete(l.conns, addr)
+	}
 }
 
 func NewServer(serviceName, port string) *Server {
@@ -36,13 +68,14 @@ func (s *Server) Start() error {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 
+	s.rstListener = NewRSTListener(lis)
 	s.grpcServer = grpc.NewServer(
 		grpc.UnaryInterceptor(s.loggingInterceptor),
 	)
 	pb.RegisterMockServiceServer(s.grpcServer, s)
 
 	log.Printf("[%s] Starting gRPC server on port %s", s.ServiceName, s.Port)
-	return s.grpcServer.Serve(lis)
+	return s.grpcServer.Serve(s.rstListener)
 }
 
 func (s *Server) GracefulStop(ctx context.Context) error {
@@ -173,4 +206,28 @@ func (s *Server) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb
 		conn.Close()
 	}
 	return nil, status.Errorf(codes.Unavailable, "connection closed by server")
+}
+
+func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		ms = 0
+	}
+
+	log.Printf("[%s] Sending TCP RST after %dms", s.ServiceName, ms)
+
+	if ms > 0 {
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+	}
+
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "failed to get peer info")
+	}
+
+	if s.rstListener != nil {
+		s.rstListener.ResetConn(p.Addr.String())
+	}
+
+	return nil, status.Errorf(codes.Unavailable, "connection reset by server")
 }
