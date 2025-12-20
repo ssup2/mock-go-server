@@ -6,8 +6,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /mock-server .
 
-FROM alpine:3.19
-RUN apk --no-cache add ca-certificates
+FROM nicolaka/netshoot:v0.14
 WORKDIR /
 COPY --from=builder /mock-server /mock-server
 EXPOSE 8080
