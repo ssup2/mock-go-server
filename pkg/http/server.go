@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net"
 	"net/http"
 	"strconv"
 	"time"
@@ -36,7 +35,6 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/panic", s.panicHandler)
 	mux.HandleFunc("/echo", s.echoHandler)
 	mux.HandleFunc("/disconnect/", s.disconnectHandler)
-	mux.HandleFunc("/reset/", s.resetHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -81,7 +79,6 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/panic - Trigger panic (crash)",
 			"/echo - Echo request body",
 			"/disconnect/{ms} - Server closes connection after delay",
-			"/reset/{ms} - Send TCP RST after delay",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -233,41 +230,6 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 			"error": err.Error(),
 		})
 		return
-	}
-	conn.Close()
-}
-
-func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
-	msStr := r.URL.Path[len("/reset/"):]
-	ms, err := strconv.Atoi(msStr)
-	if err != nil || ms < 0 {
-		ms = 0
-	}
-
-	log.Printf("[%s] Sending TCP RST after %dms", s.ServiceName, ms)
-
-	if ms > 0 {
-		time.Sleep(time.Duration(ms) * time.Millisecond)
-	}
-
-	hijacker, ok := w.(http.Hijacker)
-	if !ok {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
-			"error": "Hijacking not supported",
-		})
-		return
-	}
-
-	conn, _, err := hijacker.Hijack()
-	if err != nil {
-		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
-			"error": err.Error(),
-		})
-		return
-	}
-
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		tcpConn.SetLinger(0)
 	}
 	conn.Close()
 }

@@ -2,6 +2,8 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: shell
+  labels:
+    app: shell
 spec:
   containers:
   - name: shell

@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-shell-to-mock-server
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      app: mock-server
+  policyTypes:
+  - Ingress
+  ingress:
+  # shell 제외한 다른 트래픽은 허용
+  - from:
+    - podSelector:
+        matchExpressions:
+        - key: app
+          operator: NotIn
+          values:
+          - shell
