@@ -9,5 +9,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /mock-server .
 FROM nicolaka/netshoot:v0.14
 WORKDIR /
 COPY --from=builder /mock-server /mock-server
+RUN apk add --no-cache iptables-legacy
 EXPOSE 8080
 ENTRYPOINT ["/mock-server"]
