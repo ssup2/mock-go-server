@@ -48,8 +48,14 @@ metadata:
 spec:
   host: mock-server
   trafficPolicy:
+    connectionPool:  
+      tcp: 
+        maxConnections: 1 # default value is 2^31-1
+      http:
+        http1MaxPendingRequests: 1  # default value is 2^31-1 (unlimited)
+        maxRequestsPerConnection: 1 # default value is 0 (unlimited, 2^29)
     outlierDetection:
-      consecutive5xxErrors: 5
-      interval: 10s
-      baseEjectionTime: 30s
-      maxEjectionPercent: 100
+      consecutive5xxErrors: 5 # default value is 5
+      interval: 10s           # default value is 10s
+      baseEjectionTime: 30s   # default value is 30s
+      maxEjectionPercent: 100 # default value is 100
