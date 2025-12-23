@@ -9,3 +9,6 @@ spec:
   - name: shell
     image: nicolaka/netshoot
     command: ["sleep", "infinity"]
+    securityContext:
+      capabilities:
+        add: ["NET_ADMIN"]
