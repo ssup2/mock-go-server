@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -40,8 +41,9 @@ func (s *Server) Start() error {
 		grpc.UnaryInterceptor(s.loggingInterceptor),
 	)
 	pb.RegisterMockServiceServer(s.grpcServer, s)
+	reflection.Register(s.grpcServer)
 
-	log.Printf("[%s] Starting gRPC server on port %s", s.ServiceName, s.Port)
+	log.Printf("[%s] Starting gRPC server on port %s (reflection enabled)", s.ServiceName, s.Port)
 	return s.grpcServer.Serve(lis)
 }
 
