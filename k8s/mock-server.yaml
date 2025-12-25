@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: mock-server
-    image: ghcr.io/ssup2/mock-go-server:0.1.3
+    image: ghcr.io/ssup2/mock-go-server:0.1.4
     ports:
     - containerPort: 8080
     - containerPort: 9090
@@ -40,7 +40,6 @@ spec:
   http:
   - retries:
       attempts: 2
-      retryOn: connect-failure
     route:
     - destination:
         host: mock-server
@@ -56,8 +55,10 @@ spec:
       tcp: 
         maxConnections: 1 # default value is 2^31-1
       http:
-        http1MaxPendingRequests: 1  # default value is 2^31-1 (unlimited)
-        maxRequestsPerConnection: 1 # default value is 0 (unlimited, 2^29)
+        http1MaxPendingRequests: 1   # default value is 2^31-1 (unlimited)
+        http2MaxRequests: 1          # default value is 2^31-1 (unlimited)
+        #maxRequestsPerConnection: 1 # default value is 0 (unlimited, 2^29)
+        #maxRequestsPerConnection: 0 # default value is 0 (unlimited, 2^29)
     outlierDetection:
       consecutive5xxErrors: 5 # default value is 5
       interval: 10s           # default value is 10s
