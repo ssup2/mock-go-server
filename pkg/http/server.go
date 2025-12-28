@@ -267,6 +267,9 @@ func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
 
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		tcpConn.SetLinger(0)
+		log.Printf("[%s] Set SO_LINGER to 0", s.ServiceName)
+	} else {
+		log.Printf("[%s] Set SO_LINGER failed", s.ServiceName)
 	}
 	conn.Close()
 }

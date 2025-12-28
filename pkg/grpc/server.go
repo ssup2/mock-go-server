@@ -269,6 +269,9 @@ func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, er
 
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		tcpConn.SetLinger(0)
+		log.Printf("[%s] Set SO_LINGER to 0", s.ServiceName)
+	} else {
+		log.Printf("[%s] Set SO_LINGER failed", s.ServiceName)
 	}
 
 	conn.Close()
