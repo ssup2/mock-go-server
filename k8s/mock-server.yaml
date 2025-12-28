@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: mock-server
-    image: ghcr.io/ssup2/mock-go-server:0.1.5
+    image: ghcr.io/ssup2/mock-go-server:commit-e649d183
     ports:
     - containerPort: 8080
     - containerPort: 9090
