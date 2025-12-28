@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	pb "mock-go-server/proto"
@@ -17,17 +18,81 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type connTracker struct {
+	conns map[string]net.Conn
+	mu    sync.RWMutex
+}
+
+func newConnTracker() *connTracker {
+	return &connTracker{
+		conns: make(map[string]net.Conn),
+	}
+}
+
+func (ct *connTracker) add(addr string, conn net.Conn) {
+	ct.mu.Lock()
+	defer ct.mu.Unlock()
+	ct.conns[addr] = conn
+}
+
+func (ct *connTracker) remove(addr string) {
+	ct.mu.Lock()
+	defer ct.mu.Unlock()
+	delete(ct.conns, addr)
+}
+
+func (ct *connTracker) get(addr string) (net.Conn, bool) {
+	ct.mu.RLock()
+	defer ct.mu.RUnlock()
+	conn, ok := ct.conns[addr]
+	return conn, ok
+}
+
+type trackedListener struct {
+	net.Listener
+	tracker *connTracker
+}
+
+func (tl *trackedListener) Accept() (net.Conn, error) {
+	conn, err := tl.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+
+	addr := conn.RemoteAddr().String()
+	tl.tracker.add(addr, conn)
+
+	return &trackedConn{
+		Conn:    conn,
+		addr:    addr,
+		tracker: tl.tracker,
+	}, nil
+}
+
+type trackedConn struct {
+	net.Conn
+	addr    string
+	tracker *connTracker
+}
+
+func (tc *trackedConn) Close() error {
+	tc.tracker.remove(tc.addr)
+	return tc.Conn.Close()
+}
+
 type Server struct {
 	pb.UnimplementedMockServiceServer
 	ServiceName string
 	Port        string
 	grpcServer  *grpc.Server
+	tracker     *connTracker
 }
 
 func NewServer(serviceName, port string) *Server {
 	return &Server{
 		ServiceName: serviceName,
 		Port:        port,
+		tracker:     newConnTracker(),
 	}
 }
 
@@ -37,6 +102,11 @@ func (s *Server) Start() error {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 
+	trackedLis := &trackedListener{
+		Listener: lis,
+		tracker:  s.tracker,
+	}
+
 	s.grpcServer = grpc.NewServer(
 		grpc.UnaryInterceptor(s.loggingInterceptor),
 	)
@@ -44,7 +114,7 @@ func (s *Server) Start() error {
 	reflection.Register(s.grpcServer)
 
 	log.Printf("[%s] Starting gRPC server on port %s (reflection enabled)", s.ServiceName, s.Port)
-	return s.grpcServer.Serve(lis)
+	return s.grpcServer.Serve(trackedLis)
 }
 
 func (s *Server) GracefulStop(ctx context.Context) error {
@@ -175,4 +245,34 @@ func (s *Server) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb
 		conn.Close()
 	}
 	return nil, status.Errorf(codes.Unavailable, "connection closed by server")
+}
+
+func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending TCP RST to client connection after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "failed to get peer info")
+	}
+
+	addr := p.Addr.String()
+	conn, ok := s.tracker.get(addr)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "connection not found")
+	}
+
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		tcpConn.SetLinger(0)
+	}
+
+	conn.Close()
+	s.tracker.remove(addr)
+
+	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
 }
