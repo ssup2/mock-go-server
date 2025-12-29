@@ -266,10 +266,13 @@ func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		tcpConn.SetLinger(0)
-		log.Printf("[%s] Set SO_LINGER to 0", s.ServiceName)
+		if err := tcpConn.SetLinger(0); err != nil {
+			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
+		} else {
+			log.Printf("[%s] Set SO_LINGER to 0 successfully", s.ServiceName)
+		}
 	} else {
-		log.Printf("[%s] Set SO_LINGER failed", s.ServiceName)
+		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
 	}
 	conn.Close()
 }
