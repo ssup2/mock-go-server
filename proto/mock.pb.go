@@ -109,6 +109,50 @@ func (x *WrongProtocolRequest) GetMilliseconds() int32 {
 	return 0
 }
 
+type ResetRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Milliseconds  int32                  `protobuf:"varint,1,opt,name=milliseconds,proto3" json:"milliseconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResetRequest) Reset() {
+	*x = ResetRequest{}
+	mi := &file_proto_mock_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResetRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResetRequest) ProtoMessage() {}
+
+func (x *ResetRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_mock_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResetRequest.ProtoReflect.Descriptor instead.
+func (*ResetRequest) Descriptor() ([]byte, []int) {
+	return file_proto_mock_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ResetRequest) GetMilliseconds() int32 {
+	if x != nil {
+		return x.Milliseconds
+	}
+	return 0
+}
+
 type Empty struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -117,7 +161,7 @@ type Empty struct {
 
 func (x *Empty) Reset() {
 	*x = Empty{}
-	mi := &file_proto_mock_proto_msgTypes[2]
+	mi := &file_proto_mock_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -129,7 +173,7 @@ func (x *Empty) String() string {
 func (*Empty) ProtoMessage() {}
 
 func (x *Empty) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[2]
+	mi := &file_proto_mock_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -142,7 +186,7 @@ func (x *Empty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Empty.ProtoReflect.Descriptor instead.
 func (*Empty) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{2}
+	return file_proto_mock_proto_rawDescGZIP(), []int{3}
 }
 
 type HealthResponse struct {
@@ -155,7 +199,7 @@ type HealthResponse struct {
 
 func (x *HealthResponse) Reset() {
 	*x = HealthResponse{}
-	mi := &file_proto_mock_proto_msgTypes[3]
+	mi := &file_proto_mock_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -167,7 +211,7 @@ func (x *HealthResponse) String() string {
 func (*HealthResponse) ProtoMessage() {}
 
 func (x *HealthResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[3]
+	mi := &file_proto_mock_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -180,7 +224,7 @@ func (x *HealthResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HealthResponse.ProtoReflect.Descriptor instead.
 func (*HealthResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{3}
+	return file_proto_mock_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *HealthResponse) GetStatus() string {
@@ -207,7 +251,7 @@ type ReadyResponse struct {
 
 func (x *ReadyResponse) Reset() {
 	*x = ReadyResponse{}
-	mi := &file_proto_mock_proto_msgTypes[4]
+	mi := &file_proto_mock_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -219,7 +263,7 @@ func (x *ReadyResponse) String() string {
 func (*ReadyResponse) ProtoMessage() {}
 
 func (x *ReadyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[4]
+	mi := &file_proto_mock_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -232,7 +276,7 @@ func (x *ReadyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ReadyResponse.ProtoReflect.Descriptor instead.
 func (*ReadyResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{4}
+	return file_proto_mock_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ReadyResponse) GetStatus() string {
@@ -258,7 +302,7 @@ type StatusRequest struct {
 
 func (x *StatusRequest) Reset() {
 	*x = StatusRequest{}
-	mi := &file_proto_mock_proto_msgTypes[5]
+	mi := &file_proto_mock_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -270,7 +314,7 @@ func (x *StatusRequest) String() string {
 func (*StatusRequest) ProtoMessage() {}
 
 func (x *StatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[5]
+	mi := &file_proto_mock_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -283,7 +327,7 @@ func (x *StatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusRequest.ProtoReflect.Descriptor instead.
 func (*StatusRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{5}
+	return file_proto_mock_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *StatusRequest) GetCode() int32 {
@@ -304,7 +348,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_proto_mock_proto_msgTypes[6]
+	mi := &file_proto_mock_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -316,7 +360,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[6]
+	mi := &file_proto_mock_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -329,7 +373,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{6}
+	return file_proto_mock_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *StatusResponse) GetStatusCode() int32 {
@@ -362,7 +406,7 @@ type DelayRequest struct {
 
 func (x *DelayRequest) Reset() {
 	*x = DelayRequest{}
-	mi := &file_proto_mock_proto_msgTypes[7]
+	mi := &file_proto_mock_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -374,7 +418,7 @@ func (x *DelayRequest) String() string {
 func (*DelayRequest) ProtoMessage() {}
 
 func (x *DelayRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[7]
+	mi := &file_proto_mock_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -387,7 +431,7 @@ func (x *DelayRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelayRequest.ProtoReflect.Descriptor instead.
 func (*DelayRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{7}
+	return file_proto_mock_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *DelayRequest) GetMilliseconds() int32 {
@@ -408,7 +452,7 @@ type DelayResponse struct {
 
 func (x *DelayResponse) Reset() {
 	*x = DelayResponse{}
-	mi := &file_proto_mock_proto_msgTypes[8]
+	mi := &file_proto_mock_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -420,7 +464,7 @@ func (x *DelayResponse) String() string {
 func (*DelayResponse) ProtoMessage() {}
 
 func (x *DelayResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[8]
+	mi := &file_proto_mock_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -433,7 +477,7 @@ func (x *DelayResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DelayResponse.ProtoReflect.Descriptor instead.
 func (*DelayResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{8}
+	return file_proto_mock_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DelayResponse) GetService() string {
@@ -467,7 +511,7 @@ type HeadersResponse struct {
 
 func (x *HeadersResponse) Reset() {
 	*x = HeadersResponse{}
-	mi := &file_proto_mock_proto_msgTypes[9]
+	mi := &file_proto_mock_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -479,7 +523,7 @@ func (x *HeadersResponse) String() string {
 func (*HeadersResponse) ProtoMessage() {}
 
 func (x *HeadersResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[9]
+	mi := &file_proto_mock_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -492,7 +536,7 @@ func (x *HeadersResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HeadersResponse.ProtoReflect.Descriptor instead.
 func (*HeadersResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{9}
+	return file_proto_mock_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *HeadersResponse) GetService() string {
@@ -518,7 +562,7 @@ type LargeRequest struct {
 
 func (x *LargeRequest) Reset() {
 	*x = LargeRequest{}
-	mi := &file_proto_mock_proto_msgTypes[10]
+	mi := &file_proto_mock_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -530,7 +574,7 @@ func (x *LargeRequest) String() string {
 func (*LargeRequest) ProtoMessage() {}
 
 func (x *LargeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[10]
+	mi := &file_proto_mock_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -543,7 +587,7 @@ func (x *LargeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LargeRequest.ProtoReflect.Descriptor instead.
 func (*LargeRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{10}
+	return file_proto_mock_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LargeRequest) GetSizeKb() int32 {
@@ -562,7 +606,7 @@ type LargeResponse struct {
 
 func (x *LargeResponse) Reset() {
 	*x = LargeResponse{}
-	mi := &file_proto_mock_proto_msgTypes[11]
+	mi := &file_proto_mock_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -574,7 +618,7 @@ func (x *LargeResponse) String() string {
 func (*LargeResponse) ProtoMessage() {}
 
 func (x *LargeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[11]
+	mi := &file_proto_mock_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -587,7 +631,7 @@ func (x *LargeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LargeResponse.ProtoReflect.Descriptor instead.
 func (*LargeResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{11}
+	return file_proto_mock_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *LargeResponse) GetData() []byte {
@@ -606,7 +650,7 @@ type EchoRequest struct {
 
 func (x *EchoRequest) Reset() {
 	*x = EchoRequest{}
-	mi := &file_proto_mock_proto_msgTypes[12]
+	mi := &file_proto_mock_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -618,7 +662,7 @@ func (x *EchoRequest) String() string {
 func (*EchoRequest) ProtoMessage() {}
 
 func (x *EchoRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[12]
+	mi := &file_proto_mock_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -631,7 +675,7 @@ func (x *EchoRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EchoRequest.ProtoReflect.Descriptor instead.
 func (*EchoRequest) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{12}
+	return file_proto_mock_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EchoRequest) GetData() []byte {
@@ -650,7 +694,7 @@ type EchoResponse struct {
 
 func (x *EchoResponse) Reset() {
 	*x = EchoResponse{}
-	mi := &file_proto_mock_proto_msgTypes[13]
+	mi := &file_proto_mock_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -662,7 +706,7 @@ func (x *EchoResponse) String() string {
 func (*EchoResponse) ProtoMessage() {}
 
 func (x *EchoResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_mock_proto_msgTypes[13]
+	mi := &file_proto_mock_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -675,7 +719,7 @@ func (x *EchoResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EchoResponse.ProtoReflect.Descriptor instead.
 func (*EchoResponse) Descriptor() ([]byte, []int) {
-	return file_proto_mock_proto_rawDescGZIP(), []int{13}
+	return file_proto_mock_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *EchoResponse) GetData() []byte {
@@ -693,6 +737,8 @@ const file_proto_mock_proto_rawDesc = "" +
 	"\x11DisconnectRequest\x12\"\n" +
 	"\fmilliseconds\x18\x01 \x01(\x05R\fmilliseconds\":\n" +
 	"\x14WrongProtocolRequest\x12\"\n" +
+	"\fmilliseconds\x18\x01 \x01(\x05R\fmilliseconds\"2\n" +
+	"\fResetRequest\x12\"\n" +
 	"\fmilliseconds\x18\x01 \x01(\x05R\fmilliseconds\"\a\n" +
 	"\x05Empty\"B\n" +
 	"\x0eHealthResponse\x12\x16\n" +
@@ -728,7 +774,7 @@ const file_proto_mock_proto_rawDesc = "" +
 	"\vEchoRequest\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data\"\"\n" +
 	"\fEchoResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data2\xca\x03\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data2\xf4\x03\n" +
 	"\vMockService\x12+\n" +
 	"\x06Health\x12\v.mock.Empty\x1a\x14.mock.HealthResponse\x12)\n" +
 	"\x05Ready\x12\v.mock.Empty\x1a\x13.mock.ReadyResponse\x123\n" +
@@ -739,7 +785,8 @@ const file_proto_mock_proto_rawDesc = "" +
 	"\x04Echo\x12\x11.mock.EchoRequest\x1a\x12.mock.EchoResponse\x122\n" +
 	"\n" +
 	"Disconnect\x12\x17.mock.DisconnectRequest\x1a\v.mock.Empty\x128\n" +
-	"\rWrongProtocol\x12\x1a.mock.WrongProtocolRequest\x1a\v.mock.EmptyB\x16Z\x14mock-go-server/protob\x06proto3"
+	"\rWrongProtocol\x12\x1a.mock.WrongProtocolRequest\x1a\v.mock.Empty\x12(\n" +
+	"\x05Reset\x12\x12.mock.ResetRequest\x1a\v.mock.EmptyB\x16Z\x14mock-go-server/protob\x06proto3"
 
 var (
 	file_proto_mock_proto_rawDescOnce sync.Once
@@ -753,46 +800,49 @@ func file_proto_mock_proto_rawDescGZIP() []byte {
 	return file_proto_mock_proto_rawDescData
 }
 
-var file_proto_mock_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_proto_mock_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_proto_mock_proto_goTypes = []any{
 	(*DisconnectRequest)(nil),    // 0: mock.DisconnectRequest
 	(*WrongProtocolRequest)(nil), // 1: mock.WrongProtocolRequest
-	(*Empty)(nil),                // 2: mock.Empty
-	(*HealthResponse)(nil),       // 3: mock.HealthResponse
-	(*ReadyResponse)(nil),        // 4: mock.ReadyResponse
-	(*StatusRequest)(nil),        // 5: mock.StatusRequest
-	(*StatusResponse)(nil),       // 6: mock.StatusResponse
-	(*DelayRequest)(nil),         // 7: mock.DelayRequest
-	(*DelayResponse)(nil),        // 8: mock.DelayResponse
-	(*HeadersResponse)(nil),      // 9: mock.HeadersResponse
-	(*LargeRequest)(nil),         // 10: mock.LargeRequest
-	(*LargeResponse)(nil),        // 11: mock.LargeResponse
-	(*EchoRequest)(nil),          // 12: mock.EchoRequest
-	(*EchoResponse)(nil),         // 13: mock.EchoResponse
-	nil,                          // 14: mock.HeadersResponse.HeadersEntry
+	(*ResetRequest)(nil),         // 2: mock.ResetRequest
+	(*Empty)(nil),                // 3: mock.Empty
+	(*HealthResponse)(nil),       // 4: mock.HealthResponse
+	(*ReadyResponse)(nil),        // 5: mock.ReadyResponse
+	(*StatusRequest)(nil),        // 6: mock.StatusRequest
+	(*StatusResponse)(nil),       // 7: mock.StatusResponse
+	(*DelayRequest)(nil),         // 8: mock.DelayRequest
+	(*DelayResponse)(nil),        // 9: mock.DelayResponse
+	(*HeadersResponse)(nil),      // 10: mock.HeadersResponse
+	(*LargeRequest)(nil),         // 11: mock.LargeRequest
+	(*LargeResponse)(nil),        // 12: mock.LargeResponse
+	(*EchoRequest)(nil),          // 13: mock.EchoRequest
+	(*EchoResponse)(nil),         // 14: mock.EchoResponse
+	nil,                          // 15: mock.HeadersResponse.HeadersEntry
 }
 var file_proto_mock_proto_depIdxs = []int32{
-	14, // 0: mock.HeadersResponse.headers:type_name -> mock.HeadersResponse.HeadersEntry
-	2,  // 1: mock.MockService.Health:input_type -> mock.Empty
-	2,  // 2: mock.MockService.Ready:input_type -> mock.Empty
-	5,  // 3: mock.MockService.Status:input_type -> mock.StatusRequest
-	7,  // 4: mock.MockService.Delay:input_type -> mock.DelayRequest
-	2,  // 5: mock.MockService.Headers:input_type -> mock.Empty
-	10, // 6: mock.MockService.Large:input_type -> mock.LargeRequest
-	12, // 7: mock.MockService.Echo:input_type -> mock.EchoRequest
+	15, // 0: mock.HeadersResponse.headers:type_name -> mock.HeadersResponse.HeadersEntry
+	3,  // 1: mock.MockService.Health:input_type -> mock.Empty
+	3,  // 2: mock.MockService.Ready:input_type -> mock.Empty
+	6,  // 3: mock.MockService.Status:input_type -> mock.StatusRequest
+	8,  // 4: mock.MockService.Delay:input_type -> mock.DelayRequest
+	3,  // 5: mock.MockService.Headers:input_type -> mock.Empty
+	11, // 6: mock.MockService.Large:input_type -> mock.LargeRequest
+	13, // 7: mock.MockService.Echo:input_type -> mock.EchoRequest
 	0,  // 8: mock.MockService.Disconnect:input_type -> mock.DisconnectRequest
 	1,  // 9: mock.MockService.WrongProtocol:input_type -> mock.WrongProtocolRequest
-	3,  // 10: mock.MockService.Health:output_type -> mock.HealthResponse
-	4,  // 11: mock.MockService.Ready:output_type -> mock.ReadyResponse
-	6,  // 12: mock.MockService.Status:output_type -> mock.StatusResponse
-	8,  // 13: mock.MockService.Delay:output_type -> mock.DelayResponse
-	9,  // 14: mock.MockService.Headers:output_type -> mock.HeadersResponse
-	11, // 15: mock.MockService.Large:output_type -> mock.LargeResponse
-	13, // 16: mock.MockService.Echo:output_type -> mock.EchoResponse
-	2,  // 17: mock.MockService.Disconnect:output_type -> mock.Empty
-	2,  // 18: mock.MockService.WrongProtocol:output_type -> mock.Empty
-	10, // [10:19] is the sub-list for method output_type
-	1,  // [1:10] is the sub-list for method input_type
+	2,  // 10: mock.MockService.Reset:input_type -> mock.ResetRequest
+	4,  // 11: mock.MockService.Health:output_type -> mock.HealthResponse
+	5,  // 12: mock.MockService.Ready:output_type -> mock.ReadyResponse
+	7,  // 13: mock.MockService.Status:output_type -> mock.StatusResponse
+	9,  // 14: mock.MockService.Delay:output_type -> mock.DelayResponse
+	10, // 15: mock.MockService.Headers:output_type -> mock.HeadersResponse
+	12, // 16: mock.MockService.Large:output_type -> mock.LargeResponse
+	14, // 17: mock.MockService.Echo:output_type -> mock.EchoResponse
+	3,  // 18: mock.MockService.Disconnect:output_type -> mock.Empty
+	3,  // 19: mock.MockService.WrongProtocol:output_type -> mock.Empty
+	3,  // 20: mock.MockService.Reset:output_type -> mock.Empty
+	11, // [11:21] is the sub-list for method output_type
+	1,  // [1:11] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -809,7 +859,7 @@ func file_proto_mock_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_mock_proto_rawDesc), len(file_proto_mock_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

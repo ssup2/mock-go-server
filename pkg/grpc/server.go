@@ -267,18 +267,47 @@ func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest
 		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
 
+	// Write wrong protocol data before closing
+	dummyData := []byte("WRONG_PROTOCOL_DATA\n")
+	if _, err := conn.Write(dummyData); err != nil {
+		log.Printf("[%s] Failed to write wrong protocol data: %v", s.ServiceName, err)
+	} else {
+		log.Printf("[%s] Wrote wrong protocol data", s.ServiceName)
+	}
+
+	conn.Close()
+	s.tracker.remove(addr)
+
+	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
+}
+
+func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending TCP RST without reading request after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Don't read the request - get connection immediately
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "failed to get peer info")
+	}
+
+	addr := p.Addr.String()
+	conn, ok := s.tracker.get(addr)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "connection not found")
+	}
+
+	// Set SO_LINGER to 0 and close connection to force RST
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		if err := tcpConn.SetLinger(0); err != nil {
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
-			log.Printf("[%s] Set SO_LINGER to 0 successfully", s.ServiceName)
-			// Write dummy data before closing
-			dummyData := []byte("WRONG_PROTOCOL_DATA\n")
-			if _, err := conn.Write(dummyData); err != nil {
-				log.Printf("[%s] Failed to write dummy data: %v", s.ServiceName, err)
-			} else {
-				log.Printf("[%s] Wrote wrong protocol data", s.ServiceName)
-			}
+			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
 		}
 	} else {
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
@@ -287,5 +316,5 @@ func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest
 	conn.Close()
 	s.tracker.remove(addr)
 
-	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
+	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
 }
