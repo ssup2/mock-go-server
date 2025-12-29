@@ -247,13 +247,13 @@ func (s *Server) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb
 	return nil, status.Errorf(codes.Unavailable, "connection closed by server")
 }
 
-func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Sending TCP RST to client connection after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Sending wrong protocol data to client connection after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	p, ok := peer.FromContext(ctx)
@@ -272,12 +272,12 @@ func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, er
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
 			log.Printf("[%s] Set SO_LINGER to 0 successfully", s.ServiceName)
-			// Write dummy data before closing to trigger RST
-			dummyData := []byte("RST_TEST_DATA\n")
+			// Write dummy data before closing
+			dummyData := []byte("WRONG_PROTOCOL_DATA\n")
 			if _, err := conn.Write(dummyData); err != nil {
 				log.Printf("[%s] Failed to write dummy data: %v", s.ServiceName, err)
 			} else {
-				log.Printf("[%s] Wrote dummy data before RST", s.ServiceName)
+				log.Printf("[%s] Wrote wrong protocol data", s.ServiceName)
 			}
 		}
 	} else {
@@ -287,5 +287,5 @@ func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, er
 	conn.Close()
 	s.tracker.remove(addr)
 
-	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
+	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
 }

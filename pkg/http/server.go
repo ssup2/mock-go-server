@@ -36,7 +36,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/panic", s.panicHandler)
 	mux.HandleFunc("/echo", s.echoHandler)
 	mux.HandleFunc("/disconnect/", s.disconnectHandler)
-	mux.HandleFunc("/reset/", s.resetHandler)
+	mux.HandleFunc("/wrongprotocol/", s.wrongprotocolHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -81,7 +81,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/panic - Trigger panic (crash)",
 			"/echo - Echo request body",
 			"/disconnect/{ms} - Server closes connection after delay",
-			"/reset/{ms} - Server sends TCP RST after delay",
+			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -91,6 +91,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"Headers - Echo all request headers/metadata",
 			"Large - Large response (size in KB)",
 			"Echo - Echo request body",
+			"WrongProtocol - Server sends wrong protocol data after delay",
 		},
 	})
 }
@@ -237,17 +238,17 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 	conn.Close()
 }
 
-func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
-	msStr := r.URL.Path[len("/reset/"):]
+func (s *Server) wrongprotocolHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/wrongprotocol/"):]
 	ms, err := strconv.Atoi(msStr)
 	if err != nil || ms < 0 {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid delay. Use /reset/{milliseconds}",
+			"error": "Invalid delay. Use /wrongprotocol/{milliseconds}",
 		})
 		return
 	}
 
-	log.Printf("[%s] Sending TCP RST to client connection after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Sending wrong protocol data to client connection after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	hijacker, ok := w.(http.Hijacker)
@@ -270,12 +271,12 @@ func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
 			log.Printf("[%s] Set SO_LINGER to 0 successfully", s.ServiceName)
-			// Write dummy data before closing to trigger RST
-			dummyData := []byte("RST_TEST_DATA\n")
+			// Write dummy data before closing
+			dummyData := []byte("WRONG_PROTOCOL_DATA\n")
 			if _, err := conn.Write(dummyData); err != nil {
 				log.Printf("[%s] Failed to write dummy data: %v", s.ServiceName, err)
 			} else {
-				log.Printf("[%s] Wrote dummy data before RST", s.ServiceName)
+				log.Printf("[%s] Wrote wrong protocol data", s.ServiceName)
 			}
 		}
 	} else {

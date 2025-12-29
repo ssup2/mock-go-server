@@ -27,15 +27,15 @@ service MockService {
   // Server closes connection after delay
   rpc Disconnect(DisconnectRequest) returns (Empty);
 
-  // Server sends TCP RST after delay
-  rpc Reset(ResetRequest) returns (Empty);
+  // Server sends wrong protocol data after delay
+  rpc WrongProtocol(WrongProtocolRequest) returns (Empty);
 }
 
 message DisconnectRequest {
   int32 milliseconds = 1;
 }
 
-message ResetRequest {
+message WrongProtocolRequest {
   int32 milliseconds = 1;
 }
 
