@@ -272,6 +272,13 @@ func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, er
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
 			log.Printf("[%s] Set SO_LINGER to 0 successfully", s.ServiceName)
+			// Write dummy data before closing to trigger RST
+			dummyData := []byte("RST_TEST_DATA\n")
+			if _, err := conn.Write(dummyData); err != nil {
+				log.Printf("[%s] Failed to write dummy data: %v", s.ServiceName, err)
+			} else {
+				log.Printf("[%s] Wrote dummy data before RST", s.ServiceName)
+			}
 		}
 	} else {
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
