@@ -19,16 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MockService_Health_FullMethodName        = "/mock.MockService/Health"
-	MockService_Ready_FullMethodName         = "/mock.MockService/Ready"
-	MockService_Status_FullMethodName        = "/mock.MockService/Status"
-	MockService_Delay_FullMethodName         = "/mock.MockService/Delay"
-	MockService_Headers_FullMethodName       = "/mock.MockService/Headers"
-	MockService_Large_FullMethodName         = "/mock.MockService/Large"
-	MockService_Echo_FullMethodName          = "/mock.MockService/Echo"
-	MockService_Disconnect_FullMethodName    = "/mock.MockService/Disconnect"
-	MockService_WrongProtocol_FullMethodName = "/mock.MockService/WrongProtocol"
-	MockService_Reset_FullMethodName         = "/mock.MockService/Reset"
+	MockService_Health_FullMethodName              = "/mock.MockService/Health"
+	MockService_Ready_FullMethodName               = "/mock.MockService/Ready"
+	MockService_Status_FullMethodName              = "/mock.MockService/Status"
+	MockService_Delay_FullMethodName               = "/mock.MockService/Delay"
+	MockService_Headers_FullMethodName             = "/mock.MockService/Headers"
+	MockService_Large_FullMethodName               = "/mock.MockService/Large"
+	MockService_Echo_FullMethodName                = "/mock.MockService/Echo"
+	MockService_Disconnect_FullMethodName          = "/mock.MockService/Disconnect"
+	MockService_WrongProtocol_FullMethodName       = "/mock.MockService/WrongProtocol"
+	MockService_ResetBeforeResponse_FullMethodName = "/mock.MockService/ResetBeforeResponse"
+	MockService_ResetAfterResponse_FullMethodName  = "/mock.MockService/ResetAfterResponse"
 )
 
 // MockServiceClient is the client API for MockService service.
@@ -52,8 +53,10 @@ type MockServiceClient interface {
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Server sends wrong protocol data after delay
 	WrongProtocol(ctx context.Context, in *WrongProtocolRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Server sends TCP RST without reading request after delay
-	Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Server sends TCP RST before response after delay
+	ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Server sends headers first, then TCP RST after delay
+	ResetAfterResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type mockServiceClient struct {
@@ -154,10 +157,20 @@ func (c *mockServiceClient) WrongProtocol(ctx context.Context, in *WrongProtocol
 	return out, nil
 }
 
-func (c *mockServiceClient) Reset(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *mockServiceClient) ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, MockService_Reset_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MockService_ResetBeforeResponse_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *mockServiceClient) ResetAfterResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, MockService_ResetAfterResponse_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +198,10 @@ type MockServiceServer interface {
 	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
 	// Server sends wrong protocol data after delay
 	WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error)
-	// Server sends TCP RST without reading request after delay
-	Reset(context.Context, *ResetRequest) (*Empty, error)
+	// Server sends TCP RST before response after delay
+	ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error)
+	// Server sends headers first, then TCP RST after delay
+	ResetAfterResponse(context.Context, *ResetRequest) (*Empty, error)
 	mustEmbedUnimplementedMockServiceServer()
 }
 
@@ -224,8 +239,11 @@ func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectReq
 func (UnimplementedMockServiceServer) WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method WrongProtocol not implemented")
 }
-func (UnimplementedMockServiceServer) Reset(context.Context, *ResetRequest) (*Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method Reset not implemented")
+func (UnimplementedMockServiceServer) ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetBeforeResponse not implemented")
+}
+func (UnimplementedMockServiceServer) ResetAfterResponse(context.Context, *ResetRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetAfterResponse not implemented")
 }
 func (UnimplementedMockServiceServer) mustEmbedUnimplementedMockServiceServer() {}
 func (UnimplementedMockServiceServer) testEmbeddedByValue()                     {}
@@ -410,20 +428,38 @@ func _MockService_WrongProtocol_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MockService_Reset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MockService_ResetBeforeResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MockServiceServer).Reset(ctx, in)
+		return srv.(MockServiceServer).ResetBeforeResponse(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MockService_Reset_FullMethodName,
+		FullMethod: MockService_ResetBeforeResponse_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Reset(ctx, req.(*ResetRequest))
+		return srv.(MockServiceServer).ResetBeforeResponse(ctx, req.(*ResetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MockService_ResetAfterResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MockServiceServer).ResetAfterResponse(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MockService_ResetAfterResponse_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MockServiceServer).ResetAfterResponse(ctx, req.(*ResetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -472,8 +508,12 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MockService_WrongProtocol_Handler,
 		},
 		{
-			MethodName: "Reset",
-			Handler:    _MockService_Reset_Handler,
+			MethodName: "ResetBeforeResponse",
+			Handler:    _MockService_ResetBeforeResponse_Handler,
+		},
+		{
+			MethodName: "ResetAfterResponse",
+			Handler:    _MockService_ResetAfterResponse_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

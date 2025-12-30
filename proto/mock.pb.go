@@ -774,7 +774,7 @@ const file_proto_mock_proto_rawDesc = "" +
 	"\vEchoRequest\x12\x12\n" +
 	"\x04data\x18\x01 \x01(\fR\x04data\"\"\n" +
 	"\fEchoResponse\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\fR\x04data2\xf4\x03\n" +
+	"\x04data\x18\x01 \x01(\fR\x04data2\xb9\x04\n" +
 	"\vMockService\x12+\n" +
 	"\x06Health\x12\v.mock.Empty\x1a\x14.mock.HealthResponse\x12)\n" +
 	"\x05Ready\x12\v.mock.Empty\x1a\x13.mock.ReadyResponse\x123\n" +
@@ -785,8 +785,9 @@ const file_proto_mock_proto_rawDesc = "" +
 	"\x04Echo\x12\x11.mock.EchoRequest\x1a\x12.mock.EchoResponse\x122\n" +
 	"\n" +
 	"Disconnect\x12\x17.mock.DisconnectRequest\x1a\v.mock.Empty\x128\n" +
-	"\rWrongProtocol\x12\x1a.mock.WrongProtocolRequest\x1a\v.mock.Empty\x12(\n" +
-	"\x05Reset\x12\x12.mock.ResetRequest\x1a\v.mock.EmptyB\x16Z\x14mock-go-server/protob\x06proto3"
+	"\rWrongProtocol\x12\x1a.mock.WrongProtocolRequest\x1a\v.mock.Empty\x126\n" +
+	"\x13ResetBeforeResponse\x12\x12.mock.ResetRequest\x1a\v.mock.Empty\x125\n" +
+	"\x12ResetAfterResponse\x12\x12.mock.ResetRequest\x1a\v.mock.EmptyB\x16Z\x14mock-go-server/protob\x06proto3"
 
 var (
 	file_proto_mock_proto_rawDescOnce sync.Once
@@ -830,19 +831,21 @@ var file_proto_mock_proto_depIdxs = []int32{
 	13, // 7: mock.MockService.Echo:input_type -> mock.EchoRequest
 	0,  // 8: mock.MockService.Disconnect:input_type -> mock.DisconnectRequest
 	1,  // 9: mock.MockService.WrongProtocol:input_type -> mock.WrongProtocolRequest
-	2,  // 10: mock.MockService.Reset:input_type -> mock.ResetRequest
-	4,  // 11: mock.MockService.Health:output_type -> mock.HealthResponse
-	5,  // 12: mock.MockService.Ready:output_type -> mock.ReadyResponse
-	7,  // 13: mock.MockService.Status:output_type -> mock.StatusResponse
-	9,  // 14: mock.MockService.Delay:output_type -> mock.DelayResponse
-	10, // 15: mock.MockService.Headers:output_type -> mock.HeadersResponse
-	12, // 16: mock.MockService.Large:output_type -> mock.LargeResponse
-	14, // 17: mock.MockService.Echo:output_type -> mock.EchoResponse
-	3,  // 18: mock.MockService.Disconnect:output_type -> mock.Empty
-	3,  // 19: mock.MockService.WrongProtocol:output_type -> mock.Empty
-	3,  // 20: mock.MockService.Reset:output_type -> mock.Empty
-	11, // [11:21] is the sub-list for method output_type
-	1,  // [1:11] is the sub-list for method input_type
+	2,  // 10: mock.MockService.ResetBeforeResponse:input_type -> mock.ResetRequest
+	2,  // 11: mock.MockService.ResetAfterResponse:input_type -> mock.ResetRequest
+	4,  // 12: mock.MockService.Health:output_type -> mock.HealthResponse
+	5,  // 13: mock.MockService.Ready:output_type -> mock.ReadyResponse
+	7,  // 14: mock.MockService.Status:output_type -> mock.StatusResponse
+	9,  // 15: mock.MockService.Delay:output_type -> mock.DelayResponse
+	10, // 16: mock.MockService.Headers:output_type -> mock.HeadersResponse
+	12, // 17: mock.MockService.Large:output_type -> mock.LargeResponse
+	14, // 18: mock.MockService.Echo:output_type -> mock.EchoResponse
+	3,  // 19: mock.MockService.Disconnect:output_type -> mock.Empty
+	3,  // 20: mock.MockService.WrongProtocol:output_type -> mock.Empty
+	3,  // 21: mock.MockService.ResetBeforeResponse:output_type -> mock.Empty
+	3,  // 22: mock.MockService.ResetAfterResponse:output_type -> mock.Empty
+	12, // [12:23] is the sub-list for method output_type
+	1,  // [1:12] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
