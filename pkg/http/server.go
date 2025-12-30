@@ -83,7 +83,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/echo - Echo request body",
 			"/disconnect/{ms} - Server closes connection after delay",
 			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
-			"PUT /reset/{ms} - Server sends TCP RST after delay without reading request",
+			"/reset/{ms} - Server sends TCP RST after delay without reading request",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -280,19 +280,11 @@ func (s *Server) wrongprotocolHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) resetHandler(w http.ResponseWriter, r *http.Request) {
-	// Only accept PUT method
-	if r.Method != http.MethodPut {
-		s.respondJSON(w, http.StatusMethodNotAllowed, map[string]string{
-			"error": "Only PUT method is allowed",
-		})
-		return
-	}
-
 	msStr := r.URL.Path[len("/reset/"):]
 	ms, err := strconv.Atoi(msStr)
 	if err != nil || ms < 0 {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid delay. Use PUT /reset/{milliseconds}",
+			"error": "Invalid delay. Use /reset/{milliseconds}",
 		})
 		return
 	}
