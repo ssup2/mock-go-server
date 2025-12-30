@@ -281,13 +281,13 @@ func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest
 	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
 }
 
-func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+func (s *Server) ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Sending TCP RST without reading request after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Sending TCP RST before response after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	// Don't read the request - get connection immediately
@@ -317,4 +317,61 @@ func (s *Server) Reset(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, er
 	s.tracker.remove(addr)
 
 	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
+}
+
+func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending headers first, then TCP RST after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Send headers (metadata) first
+	md := metadata.New(map[string]string{
+		"x-custom-header": "test-value",
+		"content-type":    "application/json",
+	})
+	if err := grpc.SendHeader(ctx, md); err != nil {
+		log.Printf("[%s] Failed to send headers: %v", s.ServiceName, err)
+	}
+
+	// Get connection to force flush
+	p, ok := peer.FromContext(ctx)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "failed to get peer info")
+	}
+
+	addr := p.Addr.String()
+	conn, ok := s.tracker.get(addr)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "connection not found")
+	}
+
+	// Force flush connection to ensure headers are sent immediately
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetNoDelay(true); err == nil {
+			// SetNoDelay(true) helps ensure immediate transmission
+			log.Printf("[%s] Set TCP_NODELAY to force immediate transmission", s.ServiceName)
+		}
+		// Small delay to allow headers to be sent
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	// Set SO_LINGER to 0 and close connection to force RST
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		if err := tcpConn.SetLinger(0); err != nil {
+			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
+		} else {
+			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
+		}
+	} else {
+		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
+	}
+
+	conn.Close()
+	s.tracker.remove(addr)
+
+	return nil, status.Errorf(codes.Aborted, "TCP RST sent after headers")
 }
