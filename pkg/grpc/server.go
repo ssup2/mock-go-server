@@ -331,13 +331,13 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 	// Send headers (metadata) first
 	md := metadata.New(map[string]string{
 		"x-custom-header": "test-value",
-		"content-type":    "application/json",
+		"content-type":    "text/plain",
 	})
 	if err := grpc.SendHeader(ctx, md); err != nil {
 		log.Printf("[%s] Failed to send headers: %v", s.ServiceName, err)
 	}
 
-	// Get connection to force flush
+	// Get connection to send partial body and flush
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
@@ -349,14 +349,24 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
 
-	// Force flush connection to ensure headers are sent immediately
+	// Send partial body and force flush
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		if err := tcpConn.SetNoDelay(true); err == nil {
 			// SetNoDelay(true) helps ensure immediate transmission
 			log.Printf("[%s] Set TCP_NODELAY to force immediate transmission", s.ServiceName)
 		}
-		// Small delay to allow headers to be sent
+
+		// Write partial body directly to connection
+		partialBody := []byte("partial body\n")
+		if _, err := conn.Write(partialBody); err != nil {
+			log.Printf("[%s] Failed to write partial body: %v", s.ServiceName, err)
+		} else {
+			log.Printf("[%s] Wrote partial body to connection", s.ServiceName)
+		}
+
+		// Small delay to allow headers and body to be sent
 		time.Sleep(10 * time.Millisecond)
+		log.Printf("[%s] Flushed headers and partial body to force immediate transmission", s.ServiceName)
 	}
 
 	// Set SO_LINGER to 0 and close connection to force RST
