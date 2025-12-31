@@ -8,8 +8,11 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"reflect"
 	"strconv"
 	"time"
+
+	"golang.org/x/net/http2"
 )
 
 type Server struct {
@@ -39,6 +42,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/wrongprotocol/", s.wrongprotocolHandler)
 	mux.HandleFunc("/reset-before-response/", s.resetBeforeResponseHandler)
 	mux.HandleFunc("/reset-after-response/", s.resetAfterResponseHandler)
+	mux.HandleFunc("/http2-remote-reset/", s.http2RemoteResetHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -86,6 +90,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
 			"/reset-before-response/{ms} - Server sends TCP RST before response after delay",
 			"/reset-after-response/{ms} - Server sends headers first, then TCP RST after delay",
+			"/http2-remote-reset/{ms} - Server sends HTTP/2 RST_STREAM after delay",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -383,6 +388,103 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 	} else {
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
 	}
+	conn.Close()
+}
+
+func (s *Server) http2RemoteResetHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/http2-remote-reset/"):]
+	ms, err := strconv.Atoi(msStr)
+	if err != nil || ms < 0 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid delay. Use /http2-remote-reset/{milliseconds}",
+		})
+		return
+	}
+
+	log.Printf("[%s] Sending HTTP/2 RST_STREAM after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Check if this is HTTP/2 connection
+	if r.ProtoMajor != 2 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "HTTP/2 Remote Reset only works with HTTP/2 connections",
+		})
+		return
+	}
+
+	// Get stream ID from ResponseWriter using reflection
+	// net/http's http2.responseWriter has a streamID field
+	rv := reflect.ValueOf(w).Elem()
+	if rv.Kind() != reflect.Struct {
+		log.Printf("[%s] Failed to get stream ID: ResponseWriter is not a struct", s.ServiceName)
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to get HTTP/2 stream ID",
+		})
+		return
+	}
+
+	streamIDField := rv.FieldByName("streamID")
+	if !streamIDField.IsValid() {
+		streamIDField = rv.FieldByName("StreamID")
+	}
+	if !streamIDField.IsValid() {
+		log.Printf("[%s] Failed to get stream ID: streamID field not found", s.ServiceName)
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Failed to get HTTP/2 stream ID",
+		})
+		return
+	}
+
+	streamID := uint32(streamIDField.Uint())
+	log.Printf("[%s] Got HTTP/2 stream ID: %d", s.ServiceName, streamID)
+
+	// Hijack connection to send RST_STREAM frame
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": "Hijacking not supported",
+		})
+		return
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
+		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	// Write HTTP/2 RST_STREAM frame
+	// RST_STREAM frame format: 3 bytes length + 1 byte type + 1 byte flags + 4 bytes stream ID + 4 bytes error code = 13 bytes total
+	rstFrame := make([]byte, 13)
+	// Frame length: 3 bytes (payload length: 4 bytes for error code)
+	rstFrame[0] = 0x00
+	rstFrame[1] = 0x00
+	rstFrame[2] = 0x04
+	// Frame type: RST_STREAM (0x03)
+	rstFrame[3] = 0x03
+	// Flags: 0x00 (no flags)
+	rstFrame[4] = 0x00
+	// Stream ID (4 bytes, network byte order, with reserved bit cleared)
+	streamIDBytes := streamID & 0x7FFFFFFF // Clear reserved bit
+	rstFrame[5] = byte(streamIDBytes >> 24)
+	rstFrame[6] = byte(streamIDBytes >> 16)
+	rstFrame[7] = byte(streamIDBytes >> 8)
+	rstFrame[8] = byte(streamIDBytes)
+	// Error code: CANCEL (0x08) - indicates the stream was cancelled (4 bytes, network byte order)
+	errorCode := uint32(http2.ErrCodeCancel)
+	rstFrame[9] = byte(errorCode >> 24)
+	rstFrame[10] = byte(errorCode >> 16)
+	rstFrame[11] = byte(errorCode >> 8)
+	rstFrame[12] = byte(errorCode)
+
+	if _, err := conn.Write(rstFrame); err != nil {
+		log.Printf("[%s] Failed to write RST_STREAM frame: %v", s.ServiceName, err)
+		conn.Close()
+		return
+	}
+
+	log.Printf("[%s] Sent HTTP/2 RST_STREAM frame for stream %d", s.ServiceName, streamID)
 	conn.Close()
 }
 
