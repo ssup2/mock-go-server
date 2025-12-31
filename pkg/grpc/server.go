@@ -331,7 +331,6 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 	// Send headers (metadata) first
 	md := metadata.New(map[string]string{
 		"x-custom-header": "test-value",
-		"content-type":    "text/plain",
 	})
 	if err := grpc.SendHeader(ctx, md); err != nil {
 		log.Printf("[%s] Failed to send headers: %v", s.ServiceName, err)

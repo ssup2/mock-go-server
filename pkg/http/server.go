@@ -340,6 +340,7 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 	// Send headers first
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("X-Custom-Header", "test-value")
+	w.Header().Set("Content-Length", "100000")
 	w.WriteHeader(http.StatusOK)
 
 	// Send partial body and flush to ensure headers and body are sent immediately
