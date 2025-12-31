@@ -336,7 +336,7 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		log.Printf("[%s] Failed to send headers: %v", s.ServiceName, err)
 	}
 
-	// Get connection to send partial body and flush
+	// Get connection to send full body and flush
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
@@ -348,24 +348,29 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
 
-	// Send partial body and force flush
+	// Send full body and force flush
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		if err := tcpConn.SetNoDelay(true); err == nil {
 			// SetNoDelay(true) helps ensure immediate transmission
 			log.Printf("[%s] Set TCP_NODELAY to force immediate transmission", s.ServiceName)
 		}
 
-		// Write partial body directly to connection
-		partialBody := []byte("partial body\n")
-		if _, err := conn.Write(partialBody); err != nil {
-			log.Printf("[%s] Failed to write partial body: %v", s.ServiceName, err)
-		} else {
-			log.Printf("[%s] Wrote partial body to connection", s.ServiceName)
+		// Generate and write full body data (100KB)
+		fullBodySize := 100 * 1024 // 100KB
+		fullBody := make([]byte, fullBodySize)
+		for i := range fullBody {
+			fullBody[i] = byte('A' + (i % 26))
 		}
 
-		// Small delay to allow headers and body to be sent
-		time.Sleep(10 * time.Millisecond)
-		log.Printf("[%s] Flushed headers and partial body to force immediate transmission", s.ServiceName)
+		if _, err := conn.Write(fullBody); err != nil {
+			log.Printf("[%s] Failed to write full body: %v", s.ServiceName, err)
+		} else {
+			log.Printf("[%s] Wrote full body (%d bytes) to connection", s.ServiceName, fullBodySize)
+		}
+
+		// Delay to allow full body to be sent
+		time.Sleep(50 * time.Millisecond)
+		log.Printf("[%s] Flushed headers and full body to force immediate transmission", s.ServiceName)
 	}
 
 	// Set SO_LINGER to 0 and close connection to force RST

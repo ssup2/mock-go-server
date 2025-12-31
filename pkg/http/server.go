@@ -340,31 +340,41 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 	// Send headers first
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("X-Custom-Header", "test-value")
-	w.Header().Set("Content-Length", "100000")
+
+	// Generate full body data (100KB)
+	fullBodySize := 100 * 1024 // 100KB
+	fullBody := make([]byte, fullBodySize)
+	for i := range fullBody {
+		fullBody[i] = byte('A' + (i % 26))
+	}
+
+	w.Header().Set("Content-Length", strconv.Itoa(fullBodySize))
 	w.WriteHeader(http.StatusOK)
 
-	// Send partial body and flush to ensure headers and body are sent immediately
-	w.Write([]byte("partial body\n"))
+	// Send full body
+	if _, err := w.Write(fullBody); err != nil {
+		log.Printf("[%s] Failed to write full body: %v", s.ServiceName, err)
+		return
+	}
+
+	// Flush to ensure all data is sent
 	if flusher, ok := w.(http.Flusher); ok {
 		flusher.Flush()
-		log.Printf("[%s] Flushed headers and partial body to force immediate transmission", s.ServiceName)
+		log.Printf("[%s] Flushed full body (%d bytes) to force immediate transmission", s.ServiceName, fullBodySize)
 	}
+
+	// Small delay to ensure all data is transmitted
+	time.Sleep(50 * time.Millisecond)
 
 	// Then hijack and send RST
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		// If hijacking is not supported, just write a response
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": "Hijacking not supported",
-		})
+		log.Printf("[%s] Hijacking not supported, cannot send RST", s.ServiceName)
 		return
 	}
 	conn, _, err := hijacker.Hijack()
 	if err != nil {
-		// If hijack fails, try to write error response
-		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
-		})
+		log.Printf("[%s] Failed to hijack connection: %v", s.ServiceName, err)
 		return
 	}
 
@@ -373,7 +383,7 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 		if err := tcpConn.SetLinger(0); err != nil {
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
-			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
+			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST after full body", s.ServiceName)
 		}
 	} else {
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
