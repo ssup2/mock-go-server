@@ -341,30 +341,47 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 	w.Header().Set("Content-Type", "text/plain")
 	w.Header().Set("X-Custom-Header", "test-value")
 
-	// Generate full body data (100KB)
+	// Generate full body data (100KB) but only send partial in streaming fashion
 	fullBodySize := 100 * 1024 // 100KB
-	fullBody := make([]byte, fullBodySize)
-	for i := range fullBody {
-		fullBody[i] = byte('A' + (i % 26))
-	}
+	chunkSize := 10 * 1024     // 10KB chunks
+	partialSize := 30 * 1024   // Send only 30KB (3 chunks) before RST
 
 	w.Header().Set("Content-Length", strconv.Itoa(fullBodySize))
 	w.WriteHeader(http.StatusOK)
 
-	// Send full body
-	if _, err := w.Write(fullBody); err != nil {
-		log.Printf("[%s] Failed to write full body: %v", s.ServiceName, err)
-		return
+	// Send partial body in streaming chunks
+	flusher, hasFlusher := w.(http.Flusher)
+	sentBytes := 0
+	for sentBytes < partialSize {
+		remaining := partialSize - sentBytes
+		currentChunkSize := chunkSize
+		if remaining < chunkSize {
+			currentChunkSize = remaining
+		}
+
+		chunk := make([]byte, currentChunkSize)
+		for i := range chunk {
+			chunk[i] = byte('A' + ((sentBytes + i) % 26))
+		}
+
+		if _, err := w.Write(chunk); err != nil {
+			log.Printf("[%s] Failed to write chunk: %v", s.ServiceName, err)
+			return
+		}
+
+		// Flush after each chunk to simulate streaming
+		if hasFlusher {
+			flusher.Flush()
+		}
+
+		sentBytes += currentChunkSize
+		log.Printf("[%s] Sent chunk: %d/%d bytes", s.ServiceName, sentBytes, partialSize)
+
+		// Small delay between chunks
+		time.Sleep(10 * time.Millisecond)
 	}
 
-	// Flush to ensure all data is sent
-	if flusher, ok := w.(http.Flusher); ok {
-		flusher.Flush()
-		log.Printf("[%s] Flushed full body (%d bytes) to force immediate transmission", s.ServiceName, fullBodySize)
-	}
-
-	// Small delay to ensure all data is transmitted
-	time.Sleep(50 * time.Millisecond)
+	log.Printf("[%s] Sent partial body (%d bytes) in streaming fashion, now sending RST", s.ServiceName, sentBytes)
 
 	// Then hijack and send RST
 	hijacker, ok := w.(http.Hijacker)
@@ -383,7 +400,7 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 		if err := tcpConn.SetLinger(0); err != nil {
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
-			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST after full body", s.ServiceName)
+			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST after partial streaming", s.ServiceName)
 		}
 	} else {
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)

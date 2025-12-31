@@ -348,29 +348,43 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
 
-	// Send full body and force flush
+	// Send partial body in streaming chunks and force flush
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		if err := tcpConn.SetNoDelay(true); err == nil {
 			// SetNoDelay(true) helps ensure immediate transmission
 			log.Printf("[%s] Set TCP_NODELAY to force immediate transmission", s.ServiceName)
 		}
 
-		// Generate and write full body data (100KB)
-		fullBodySize := 100 * 1024 // 100KB
-		fullBody := make([]byte, fullBodySize)
-		for i := range fullBody {
-			fullBody[i] = byte('A' + (i % 26))
+		// Generate body data but only send partial in streaming fashion
+		chunkSize := 10 * 1024   // 10KB chunks
+		partialSize := 30 * 1024 // Send only 30KB (3 chunks) before RST
+
+		sentBytes := 0
+		for sentBytes < partialSize {
+			remaining := partialSize - sentBytes
+			currentChunkSize := chunkSize
+			if remaining < chunkSize {
+				currentChunkSize = remaining
+			}
+
+			chunk := make([]byte, currentChunkSize)
+			for i := range chunk {
+				chunk[i] = byte('A' + ((sentBytes + i) % 26))
+			}
+
+			if _, err := conn.Write(chunk); err != nil {
+				log.Printf("[%s] Failed to write chunk: %v", s.ServiceName, err)
+				break
+			}
+
+			sentBytes += currentChunkSize
+			log.Printf("[%s] Sent chunk: %d/%d bytes", s.ServiceName, sentBytes, partialSize)
+
+			// Small delay between chunks to simulate streaming
+			time.Sleep(10 * time.Millisecond)
 		}
 
-		if _, err := conn.Write(fullBody); err != nil {
-			log.Printf("[%s] Failed to write full body: %v", s.ServiceName, err)
-		} else {
-			log.Printf("[%s] Wrote full body (%d bytes) to connection", s.ServiceName, fullBodySize)
-		}
-
-		// Delay to allow full body to be sent
-		time.Sleep(50 * time.Millisecond)
-		log.Printf("[%s] Flushed headers and full body to force immediate transmission", s.ServiceName)
+		log.Printf("[%s] Sent partial body (%d bytes) in streaming fashion, now sending RST", s.ServiceName, sentBytes)
 	}
 
 	// Set SO_LINGER to 0 and close connection to force RST
