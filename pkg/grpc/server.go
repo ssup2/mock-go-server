@@ -325,18 +325,10 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Sending headers first, then TCP RST after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Sending response first, then TCP RST after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
-	// Send headers (metadata) first
-	md := metadata.New(map[string]string{
-		"x-custom-header": "test-value",
-	})
-	if err := grpc.SendHeader(ctx, md); err != nil {
-		log.Printf("[%s] Failed to send headers: %v", s.ServiceName, err)
-	}
-
-	// Get connection to send full body and flush
+	// Get connection to close after response is sent
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
@@ -348,58 +340,27 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
 
-	// Send partial body in streaming chunks and force flush
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		if err := tcpConn.SetNoDelay(true); err == nil {
-			// SetNoDelay(true) helps ensure immediate transmission
-			log.Printf("[%s] Set TCP_NODELAY to force immediate transmission", s.ServiceName)
-		}
+	// Send gRPC response first - gRPC automatically flushes when response is returned
+	// Return response first, then close connection in goroutine to ensure response is sent
+	response := &pb.Empty{}
 
-		// Generate body data but only send partial in streaming fashion
-		chunkSize := 10 * 1024   // 10KB chunks
-		partialSize := 30 * 1024 // Send only 30KB (3 chunks) before RST
+	go func() {
+		time.Sleep(10 * time.Millisecond)
 
-		sentBytes := 0
-		for sentBytes < partialSize {
-			remaining := partialSize - sentBytes
-			currentChunkSize := chunkSize
-			if remaining < chunkSize {
-				currentChunkSize = remaining
+		// Set SO_LINGER to 0 and close connection to force RST
+		if tcpConn, ok := conn.(*net.TCPConn); ok {
+			if err := tcpConn.SetLinger(0); err != nil {
+				log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
+			} else {
+				log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
 			}
-
-			chunk := make([]byte, currentChunkSize)
-			for i := range chunk {
-				chunk[i] = byte('A' + ((sentBytes + i) % 26))
-			}
-
-			if _, err := conn.Write(chunk); err != nil {
-				log.Printf("[%s] Failed to write chunk: %v", s.ServiceName, err)
-				break
-			}
-
-			sentBytes += currentChunkSize
-			log.Printf("[%s] Sent chunk: %d/%d bytes", s.ServiceName, sentBytes, partialSize)
-
-			// Small delay between chunks to simulate streaming
-			time.Sleep(10 * time.Millisecond)
-		}
-
-		log.Printf("[%s] Sent partial body (%d bytes) in streaming fashion, now sending RST", s.ServiceName, sentBytes)
-	}
-
-	// Set SO_LINGER to 0 and close connection to force RST
-	if tcpConn, ok := conn.(*net.TCPConn); ok {
-		if err := tcpConn.SetLinger(0); err != nil {
-			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
-			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
+			log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
 		}
-	} else {
-		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
-	}
 
-	conn.Close()
-	s.tracker.remove(addr)
+		conn.Close()
+		s.tracker.remove(addr)
+	}()
 
-	return nil, status.Errorf(codes.Aborted, "TCP RST sent after headers")
+	return response, nil
 }
