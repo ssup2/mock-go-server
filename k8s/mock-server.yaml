@@ -7,7 +7,7 @@ metadata:
 spec:
   containers:
   - name: mock-server
-    image: ghcr.io/ssup2/mock-go-server:commit-a6e81068
+    image: ghcr.io/ssup2/mock-go-server:commit-e80aa1e7
     ports:
     - containerPort: 8080
     - containerPort: 9090
@@ -38,8 +38,10 @@ spec:
   hosts:
   - mock-server
   http:
-  - retries:
-      attempts: 2
+  - timeout: 10s # default is disabled
+    retries:
+      attempts: 2                                                     # default value
+      retryOn: "connect-failure,refused-stream,unavailable,cancelled" # default value
     route:
     - destination:
         host: mock-server
@@ -51,16 +53,15 @@ metadata:
 spec:
   host: mock-server
   trafficPolicy:
-    connectionPool:  
-      tcp: 
-        maxConnections: 1 # default value is 2^31-1
+    connectionPool:
+      #tcp:
+      #  maxConnections: 1 # default value is 2^31-1
       http:
-        http1MaxPendingRequests: 1   # default value is 2^31-1 (unlimited)
+      #  http1MaxPendingRequests: 1   # default value is 2^31-1 (unlimited)
         http2MaxRequests: 1          # default value is 2^31-1 (unlimited)
-        #maxRequestsPerConnection: 1 # default value is 0 (unlimited, 2^29)
-        #maxRequestsPerConnection: 0 # default value is 0 (unlimited, 2^29)
+      #  maxConcurrentStreams: 1      # default value is 2^31-1 (unlimited)
     outlierDetection:
-      consecutive5xxErrors: 5 # default value is 5
-      interval: 10s           # default value is 10s
-      baseEjectionTime: 30s   # default value is 30s
-      maxEjectionPercent: 100 # default value is 100
+      consecutive5xxErrors: 5 # default value
+      interval: 10s           # default value
+      baseEjectionTime: 30s   # default value
+      maxEjectionPercent: 100 # default value
