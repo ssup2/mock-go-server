@@ -31,10 +31,16 @@ service MockService {
   rpc WrongProtocol(WrongProtocolRequest) returns (Empty);
 
   // Server sends TCP RST before response after delay
-  rpc ResetBeforeResponse(ResetRequest) returns (Empty);
+  rpc TCPResetBeforeResponse(ResetRequest) returns (Empty);
 
-  // Server sends headers first, then TCP RST after delay
-  rpc ResetAfterResponse(ResetRequest) returns (Empty);
+  // Server sends response first, then TCP RST after delay
+  rpc TCPResetAfterResponse(ResetRequest) returns (Empty);
+
+  // Server sends HTTP/2 RST_STREAM before response after delay
+  rpc HTTP2ResetBeforeResponse(ResetRequest) returns (Empty);
+
+  // Server sends response first, then HTTP/2 RST_STREAM after delay
+  rpc HTTP2ResetAfterResponse(ResetRequest) returns (Empty);
 }
 
 message DisconnectRequest {

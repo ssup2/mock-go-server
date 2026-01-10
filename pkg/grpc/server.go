@@ -281,7 +281,7 @@ func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest
 	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
 }
 
-func (s *Server) ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+func (s *Server) TCPResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
@@ -319,7 +319,7 @@ func (s *Server) ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) 
 	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
 }
 
-func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+func (s *Server) TCPResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
@@ -363,4 +363,31 @@ func (s *Server) ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (
 	}()
 
 	return response, nil
+}
+
+func (s *Server) HTTP2ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending HTTP/2 RST_STREAM before response after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Return Canceled error to trigger RST_STREAM
+	return nil, status.Errorf(codes.Canceled, "RST_STREAM sent")
+}
+
+func (s *Server) HTTP2ResetAfterResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending response first, then HTTP/2 RST_STREAM after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// For gRPC unary calls, we can't send partial response then RST_STREAM
+	// Return Canceled error after delay to simulate RST_STREAM behavior
+	return nil, status.Errorf(codes.Canceled, "RST_STREAM sent after delay")
 }

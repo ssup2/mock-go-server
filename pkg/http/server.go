@@ -37,8 +37,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/echo", s.echoHandler)
 	mux.HandleFunc("/disconnect/", s.disconnectHandler)
 	mux.HandleFunc("/wrongprotocol/", s.wrongprotocolHandler)
-	mux.HandleFunc("/reset-before-response/", s.resetBeforeResponseHandler)
-	mux.HandleFunc("/reset-after-response/", s.resetAfterResponseHandler)
+	mux.HandleFunc("/tcp-reset-before-response/", s.tcpResetBeforeResponseHandler)
+	mux.HandleFunc("/tcp-reset-after-response/", s.tcpResetAfterResponseHandler)
+	mux.HandleFunc("/http2-reset-before-response/", s.http2ResetBeforeResponseHandler)
+	mux.HandleFunc("/http2-reset-after-response/", s.http2ResetAfterResponseHandler)
 	mux.HandleFunc("/health", s.healthHandler)
 	mux.HandleFunc("/ready", s.readyHandler)
 
@@ -84,8 +86,10 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"/echo - Echo request body",
 			"/disconnect/{ms} - Server closes connection after delay",
 			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
-			"/reset-before-response/{ms} - Server sends TCP RST before response after delay",
-			"/reset-after-response/{ms} - Server sends headers first, then TCP RST after delay",
+			"/tcp-reset-before-response/{ms} - Server sends TCP RST before response after delay",
+			"/tcp-reset-after-response/{ms} - Server sends response first, then TCP RST after delay",
+			"/http2-reset-before-response/{ms} - Server sends HTTP/2 RST_STREAM before response after delay",
+			"/http2-reset-after-response/{ms} - Server sends response first, then HTTP/2 RST_STREAM after delay",
 		},
 		"grpc_methods": []string{
 			"Health - Health check",
@@ -96,8 +100,10 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 			"Large - Large response (size in KB)",
 			"Echo - Echo request body",
 			"WrongProtocol - Server sends wrong protocol data after delay",
-			"ResetBeforeResponse - Server sends TCP RST before response after delay",
-			"ResetAfterResponse - Server sends headers first, then TCP RST after delay",
+			"TCPResetBeforeResponse - Server sends TCP RST before response after delay",
+			"TCPResetAfterResponse - Server sends response first, then TCP RST after delay",
+			"HTTP2ResetBeforeResponse - Server sends HTTP/2 RST_STREAM before response after delay",
+			"HTTP2ResetAfterResponse - Server sends response first, then HTTP/2 RST_STREAM after delay",
 		},
 	})
 }
@@ -282,12 +288,12 @@ func (s *Server) wrongprotocolHandler(w http.ResponseWriter, r *http.Request) {
 	conn.Close()
 }
 
-func (s *Server) resetBeforeResponseHandler(w http.ResponseWriter, r *http.Request) {
-	msStr := r.URL.Path[len("/reset-before-response/"):]
+func (s *Server) tcpResetBeforeResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/tcp-reset-before-response/"):]
 	ms, err := strconv.Atoi(msStr)
 	if err != nil || ms < 0 {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid delay. Use /reset-before-response/{milliseconds}",
+			"error": "Invalid delay. Use /tcp-reset-before-response/{milliseconds}",
 		})
 		return
 	}
@@ -324,12 +330,12 @@ func (s *Server) resetBeforeResponseHandler(w http.ResponseWriter, r *http.Reque
 	conn.Close()
 }
 
-func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Request) {
-	msStr := r.URL.Path[len("/reset-after-response/"):]
+func (s *Server) tcpResetAfterResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/tcp-reset-after-response/"):]
 	ms, err := strconv.Atoi(msStr)
 	if err != nil || ms < 0 {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid delay. Use /reset-after-response/{milliseconds}",
+			"error": "Invalid delay. Use /tcp-reset-after-response/{milliseconds}",
 		})
 		return
 	}
@@ -384,6 +390,50 @@ func (s *Server) resetAfterResponseHandler(w http.ResponseWriter, r *http.Reques
 		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
 	}
 	conn.Close()
+}
+
+func (s *Server) http2ResetBeforeResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/http2-reset-before-response/"):]
+	ms, err := strconv.Atoi(msStr)
+	if err != nil || ms < 0 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid delay. Use /http2-reset-before-response/{milliseconds}",
+		})
+		return
+	}
+
+	log.Printf("[%s] Sending HTTP/2 RST_STREAM before response after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Panic with http.ErrAbortHandler to trigger RST_STREAM without logging
+	panic(http.ErrAbortHandler)
+}
+
+func (s *Server) http2ResetAfterResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/http2-reset-after-response/"):]
+	ms, err := strconv.Atoi(msStr)
+	if err != nil || ms < 0 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid delay. Use /http2-reset-after-response/{milliseconds}",
+		})
+		return
+	}
+
+	log.Printf("[%s] Sending response first, then HTTP/2 RST_STREAM after %dms", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Send partial response
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Length", "1000")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("partial response"))
+
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
+	// Panic with http.ErrAbortHandler to trigger RST_STREAM without logging
+	panic(http.ErrAbortHandler)
 }
 
 func (s *Server) respondJSON(w http.ResponseWriter, status int, data interface{}) {
