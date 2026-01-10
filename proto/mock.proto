@@ -30,17 +30,11 @@ service MockService {
   // Server sends wrong protocol data after delay
   rpc WrongProtocol(WrongProtocolRequest) returns (Empty);
 
-  // Server sends TCP RST before response after delay
-  rpc TCPResetBeforeResponse(ResetRequest) returns (Empty);
+  // Server sends RST before response after delay
+  rpc ResetBeforeResponse(ResetRequest) returns (Empty);
 
-  // Server streams responses, then TCP RST
-  rpc TCPResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
-
-  // Server sends HTTP/2 RST_STREAM before response after delay
-  rpc HTTP2ResetBeforeResponse(ResetRequest) returns (Empty);
-
-  // Server streams responses, then HTTP/2 RST_STREAM
-  rpc HTTP2ResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
+  // Server streams responses, then RST
+  rpc ResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
 }
 
 message DisconnectRequest {

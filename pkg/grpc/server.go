@@ -135,18 +135,6 @@ func (s *Server) GracefulStop(ctx context.Context) error {
 	}
 }
 
-func (s *Server) restart() {
-	s.grpcServer.Stop()
-	log.Printf("[%s] gRPC server stopped, RST_STREAM sent to all clients", s.ServiceName)
-
-	// Restart server
-	go func() {
-		if err := s.Start(); err != nil {
-			log.Printf("[%s] Failed to restart gRPC server: %v", s.ServiceName, err)
-		}
-	}()
-}
-
 func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	start := time.Now()
 	log.Printf("[%s] gRPC %s", s.ServiceName, info.FullMethod)
@@ -293,16 +281,15 @@ func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest
 	return nil, status.Errorf(codes.Aborted, "Wrong protocol data sent")
 }
 
-func (s *Server) TCPResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
+func (s *Server) ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Sending TCP RST before response after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Sending RST before response after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
-	// Don't read the request - get connection immediately
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
@@ -319,19 +306,17 @@ func (s *Server) TCPResetBeforeResponse(ctx context.Context, req *pb.ResetReques
 		if err := tcpConn.SetLinger(0); err != nil {
 			log.Printf("[%s] Failed to set SO_LINGER to 0: %v", s.ServiceName, err)
 		} else {
-			log.Printf("[%s] Set SO_LINGER to 0 successfully, closing connection to force RST", s.ServiceName)
+			log.Printf("[%s] Set SO_LINGER to 0, forcing RST", s.ServiceName)
 		}
-	} else {
-		log.Printf("[%s] Connection is not a TCP connection, cannot set SO_LINGER", s.ServiceName)
 	}
 
 	conn.Close()
 	s.tracker.remove(addr)
 
-	return nil, status.Errorf(codes.Aborted, "TCP RST sent")
+	return nil, status.Errorf(codes.Aborted, "RST sent")
 }
 
-func (s *Server) TCPResetAfterResponse(req *pb.StreamingResetRequest, stream pb.MockService_TCPResetAfterResponseServer) error {
+func (s *Server) ResetAfterResponse(req *pb.StreamingResetRequest, stream pb.MockService_ResetAfterResponseServer) error {
 	count := int(req.GetCount())
 	if count <= 0 {
 		count = 5
@@ -341,7 +326,7 @@ func (s *Server) TCPResetAfterResponse(req *pb.StreamingResetRequest, stream pb.
 		intervalMs = 100
 	}
 
-	log.Printf("[%s] Streaming %d responses, then TCP RST", s.ServiceName, count)
+	log.Printf("[%s] Streaming %d responses, then RST", s.ServiceName, count)
 
 	// Get connection for later reset
 	p, ok := peer.FromContext(stream.Context())
@@ -365,60 +350,13 @@ func (s *Server) TCPResetAfterResponse(req *pb.StreamingResetRequest, stream pb.
 		time.Sleep(time.Duration(intervalMs) * time.Millisecond)
 	}
 
-	// Force TCP RST
+	// Force RST
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		tcpConn.SetLinger(0)
-		log.Printf("[%s] Set SO_LINGER to 0, forcing TCP RST", s.ServiceName)
+		log.Printf("[%s] Set SO_LINGER to 0, forcing RST", s.ServiceName)
 	}
 	conn.Close()
 	s.tracker.remove(addr)
 
-	return status.Errorf(codes.Unavailable, "TCP RST sent after %d messages", count)
-}
-
-
-
-func (s *Server) HTTP2ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) (*pb.Empty, error) {
-	ms := req.GetMilliseconds()
-	if ms < 0 {
-		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
-	}
-
-	log.Printf("[%s] Sending HTTP/2 RST_STREAM before response after %dms (restarting gRPC server)", s.ServiceName, ms)
-	time.Sleep(time.Duration(ms) * time.Millisecond)
-
-	// Stop and restart gRPC server - triggers GOAWAY and RST_STREAM for all streams
-	go s.restart()
-
-	// This return likely won't reach client - server is stopping
-	return nil, status.Errorf(codes.Unavailable, "server restarting")
-}
-
-func (s *Server) HTTP2ResetAfterResponse(req *pb.StreamingResetRequest, stream pb.MockService_HTTP2ResetAfterResponseServer) error {
-	count := int(req.GetCount())
-	if count <= 0 {
-		count = 5
-	}
-	intervalMs := req.GetIntervalMs()
-	if intervalMs <= 0 {
-		intervalMs = 100
-	}
-
-	log.Printf("[%s] Streaming %d responses, then HTTP/2 RST_STREAM (server restart)", s.ServiceName, count)
-
-	// Stream responses
-	for i := 0; i < count; i++ {
-		if err := stream.Send(&pb.ResetStreamResponse{
-			Sequence: int32(i),
-			Data:     []byte(fmt.Sprintf("message %d", i)),
-		}); err != nil {
-			return err
-		}
-		time.Sleep(time.Duration(intervalMs) * time.Millisecond)
-	}
-
-	// Restart server to trigger RST_STREAM
-	go s.restart()
-
-	return status.Errorf(codes.Unavailable, "HTTP/2 RST_STREAM sent after %d messages", count)
+	return status.Errorf(codes.Unavailable, "RST sent after %d messages", count)
 }

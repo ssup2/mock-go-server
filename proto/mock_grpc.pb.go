@@ -19,19 +19,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MockService_Health_FullMethodName                   = "/mock.MockService/Health"
-	MockService_Ready_FullMethodName                    = "/mock.MockService/Ready"
-	MockService_Status_FullMethodName                   = "/mock.MockService/Status"
-	MockService_Delay_FullMethodName                    = "/mock.MockService/Delay"
-	MockService_Headers_FullMethodName                  = "/mock.MockService/Headers"
-	MockService_Large_FullMethodName                    = "/mock.MockService/Large"
-	MockService_Echo_FullMethodName                     = "/mock.MockService/Echo"
-	MockService_Disconnect_FullMethodName               = "/mock.MockService/Disconnect"
-	MockService_WrongProtocol_FullMethodName            = "/mock.MockService/WrongProtocol"
-	MockService_TCPResetBeforeResponse_FullMethodName   = "/mock.MockService/TCPResetBeforeResponse"
-	MockService_TCPResetAfterResponse_FullMethodName    = "/mock.MockService/TCPResetAfterResponse"
-	MockService_HTTP2ResetBeforeResponse_FullMethodName = "/mock.MockService/HTTP2ResetBeforeResponse"
-	MockService_HTTP2ResetAfterResponse_FullMethodName  = "/mock.MockService/HTTP2ResetAfterResponse"
+	MockService_Health_FullMethodName              = "/mock.MockService/Health"
+	MockService_Ready_FullMethodName               = "/mock.MockService/Ready"
+	MockService_Status_FullMethodName              = "/mock.MockService/Status"
+	MockService_Delay_FullMethodName               = "/mock.MockService/Delay"
+	MockService_Headers_FullMethodName             = "/mock.MockService/Headers"
+	MockService_Large_FullMethodName               = "/mock.MockService/Large"
+	MockService_Echo_FullMethodName                = "/mock.MockService/Echo"
+	MockService_Disconnect_FullMethodName          = "/mock.MockService/Disconnect"
+	MockService_WrongProtocol_FullMethodName       = "/mock.MockService/WrongProtocol"
+	MockService_ResetBeforeResponse_FullMethodName = "/mock.MockService/ResetBeforeResponse"
+	MockService_ResetAfterResponse_FullMethodName  = "/mock.MockService/ResetAfterResponse"
 )
 
 // MockServiceClient is the client API for MockService service.
@@ -55,14 +53,10 @@ type MockServiceClient interface {
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Server sends wrong protocol data after delay
 	WrongProtocol(ctx context.Context, in *WrongProtocolRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Server sends TCP RST before response after delay
-	TCPResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Server streams responses, then TCP RST
-	TCPResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error)
-	// Server sends HTTP/2 RST_STREAM before response after delay
-	HTTP2ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Server streams responses, then HTTP/2 RST_STREAM
-	HTTP2ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error)
+	// Server sends RST before response after delay
+	ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Server streams responses, then RST
+	ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error)
 }
 
 type mockServiceClient struct {
@@ -163,19 +157,19 @@ func (c *mockServiceClient) WrongProtocol(ctx context.Context, in *WrongProtocol
 	return out, nil
 }
 
-func (c *mockServiceClient) TCPResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *mockServiceClient) ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, MockService_TCPResetBeforeResponse_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MockService_ResetBeforeResponse_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *mockServiceClient) TCPResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
+func (c *mockServiceClient) ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[0], MockService_TCPResetAfterResponse_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[0], MockService_ResetAfterResponse_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -190,36 +184,7 @@ func (c *mockServiceClient) TCPResetAfterResponse(ctx context.Context, in *Strea
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MockService_TCPResetAfterResponseClient = grpc.ServerStreamingClient[ResetStreamResponse]
-
-func (c *mockServiceClient) HTTP2ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Empty)
-	err := c.cc.Invoke(ctx, MockService_HTTP2ResetBeforeResponse_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mockServiceClient) HTTP2ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[1], MockService_HTTP2ResetAfterResponse_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[StreamingResetRequest, ResetStreamResponse]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MockService_HTTP2ResetAfterResponseClient = grpc.ServerStreamingClient[ResetStreamResponse]
+type MockService_ResetAfterResponseClient = grpc.ServerStreamingClient[ResetStreamResponse]
 
 // MockServiceServer is the server API for MockService service.
 // All implementations must embed UnimplementedMockServiceServer
@@ -242,14 +207,10 @@ type MockServiceServer interface {
 	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
 	// Server sends wrong protocol data after delay
 	WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error)
-	// Server sends TCP RST before response after delay
-	TCPResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error)
-	// Server streams responses, then TCP RST
-	TCPResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error
-	// Server sends HTTP/2 RST_STREAM before response after delay
-	HTTP2ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error)
-	// Server streams responses, then HTTP/2 RST_STREAM
-	HTTP2ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error
+	// Server sends RST before response after delay
+	ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error)
+	// Server streams responses, then RST
+	ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error
 	mustEmbedUnimplementedMockServiceServer()
 }
 
@@ -287,17 +248,11 @@ func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectReq
 func (UnimplementedMockServiceServer) WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method WrongProtocol not implemented")
 }
-func (UnimplementedMockServiceServer) TCPResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method TCPResetBeforeResponse not implemented")
+func (UnimplementedMockServiceServer) ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResetBeforeResponse not implemented")
 }
-func (UnimplementedMockServiceServer) TCPResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error {
-	return status.Error(codes.Unimplemented, "method TCPResetAfterResponse not implemented")
-}
-func (UnimplementedMockServiceServer) HTTP2ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method HTTP2ResetBeforeResponse not implemented")
-}
-func (UnimplementedMockServiceServer) HTTP2ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error {
-	return status.Error(codes.Unimplemented, "method HTTP2ResetAfterResponse not implemented")
+func (UnimplementedMockServiceServer) ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method ResetAfterResponse not implemented")
 }
 func (UnimplementedMockServiceServer) mustEmbedUnimplementedMockServiceServer() {}
 func (UnimplementedMockServiceServer) testEmbeddedByValue()                     {}
@@ -482,63 +437,34 @@ func _MockService_WrongProtocol_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MockService_TCPResetBeforeResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _MockService_ResetBeforeResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MockServiceServer).TCPResetBeforeResponse(ctx, in)
+		return srv.(MockServiceServer).ResetBeforeResponse(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MockService_TCPResetBeforeResponse_FullMethodName,
+		FullMethod: MockService_ResetBeforeResponse_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).TCPResetBeforeResponse(ctx, req.(*ResetRequest))
+		return srv.(MockServiceServer).ResetBeforeResponse(ctx, req.(*ResetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MockService_TCPResetAfterResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _MockService_ResetAfterResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamingResetRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(MockServiceServer).TCPResetAfterResponse(m, &grpc.GenericServerStream[StreamingResetRequest, ResetStreamResponse]{ServerStream: stream})
+	return srv.(MockServiceServer).ResetAfterResponse(m, &grpc.GenericServerStream[StreamingResetRequest, ResetStreamResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MockService_TCPResetAfterResponseServer = grpc.ServerStreamingServer[ResetStreamResponse]
-
-func _MockService_HTTP2ResetBeforeResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ResetRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).HTTP2ResetBeforeResponse(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_HTTP2ResetBeforeResponse_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).HTTP2ResetBeforeResponse(ctx, req.(*ResetRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MockService_HTTP2ResetAfterResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamingResetRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(MockServiceServer).HTTP2ResetAfterResponse(m, &grpc.GenericServerStream[StreamingResetRequest, ResetStreamResponse]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type MockService_HTTP2ResetAfterResponseServer = grpc.ServerStreamingServer[ResetStreamResponse]
+type MockService_ResetAfterResponseServer = grpc.ServerStreamingServer[ResetStreamResponse]
 
 // MockService_ServiceDesc is the grpc.ServiceDesc for MockService service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -584,23 +510,14 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MockService_WrongProtocol_Handler,
 		},
 		{
-			MethodName: "TCPResetBeforeResponse",
-			Handler:    _MockService_TCPResetBeforeResponse_Handler,
-		},
-		{
-			MethodName: "HTTP2ResetBeforeResponse",
-			Handler:    _MockService_HTTP2ResetBeforeResponse_Handler,
+			MethodName: "ResetBeforeResponse",
+			Handler:    _MockService_ResetBeforeResponse_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "TCPResetAfterResponse",
-			Handler:       _MockService_TCPResetAfterResponse_Handler,
-			ServerStreams: true,
-		},
-		{
-			StreamName:    "HTTP2ResetAfterResponse",
-			Handler:       _MockService_HTTP2ResetAfterResponse_Handler,
+			StreamName:    "ResetAfterResponse",
+			Handler:       _MockService_ResetAfterResponse_Handler,
 			ServerStreams: true,
 		},
 	},
