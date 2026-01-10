@@ -33,14 +33,14 @@ service MockService {
   // Server sends TCP RST before response after delay
   rpc TCPResetBeforeResponse(ResetRequest) returns (Empty);
 
-  // Server sends response first, then TCP RST after delay
-  rpc TCPResetAfterResponse(ResetRequest) returns (Empty);
+  // Server streams responses, then TCP RST
+  rpc TCPResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
 
   // Server sends HTTP/2 RST_STREAM before response after delay
   rpc HTTP2ResetBeforeResponse(ResetRequest) returns (Empty);
 
-  // Server sends response first, then HTTP/2 RST_STREAM after delay
-  rpc HTTP2ResetAfterResponse(ResetRequest) returns (Empty);
+  // Server streams responses, then HTTP/2 RST_STREAM
+  rpc HTTP2ResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
 }
 
 message DisconnectRequest {
@@ -53,6 +53,16 @@ message WrongProtocolRequest {
 
 message ResetRequest {
   int32 milliseconds = 1;
+}
+
+message StreamingResetRequest {
+  int32 count = 1;           // Number of messages to send before reset
+  int32 interval_ms = 2;     // Interval between messages in milliseconds
+}
+
+message ResetStreamResponse {
+  int32 sequence = 1;        // Message sequence number
+  bytes data = 2;            // Payload data
 }
 
 message Empty {}
