@@ -33,8 +33,8 @@ service MockService {
   // Server sends RST before response after delay
   rpc ResetBeforeResponse(ResetRequest) returns (Empty);
 
-  // Server streams responses, then RST
-  rpc ResetAfterResponse(StreamingResetRequest) returns (stream ResetStreamResponse);
+  // Server sends dummy data, then RST
+  rpc ResetAfterResponse(ResetRequest) returns (stream ResetStreamResponse);
 }
 
 message DisconnectRequest {
@@ -47,11 +47,6 @@ message WrongProtocolRequest {
 
 message ResetRequest {
   int32 milliseconds = 1;
-}
-
-message StreamingResetRequest {
-  int32 count = 1;           // Number of messages to send before reset
-  int32 interval_ms = 2;     // Interval between messages in milliseconds
 }
 
 message ResetStreamResponse {

@@ -55,8 +55,8 @@ type MockServiceClient interface {
 	WrongProtocol(ctx context.Context, in *WrongProtocolRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Server sends RST before response after delay
 	ResetBeforeResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (*Empty, error)
-	// Server streams responses, then RST
-	ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error)
+	// Server sends dummy data, then RST
+	ResetAfterResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error)
 }
 
 type mockServiceClient struct {
@@ -167,13 +167,13 @@ func (c *mockServiceClient) ResetBeforeResponse(ctx context.Context, in *ResetRe
 	return out, nil
 }
 
-func (c *mockServiceClient) ResetAfterResponse(ctx context.Context, in *StreamingResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
+func (c *mockServiceClient) ResetAfterResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[0], MockService_ResetAfterResponse_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[StreamingResetRequest, ResetStreamResponse]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ResetRequest, ResetStreamResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -209,8 +209,8 @@ type MockServiceServer interface {
 	WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error)
 	// Server sends RST before response after delay
 	ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error)
-	// Server streams responses, then RST
-	ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error
+	// Server sends dummy data, then RST
+	ResetAfterResponse(*ResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error
 	mustEmbedUnimplementedMockServiceServer()
 }
 
@@ -251,7 +251,7 @@ func (UnimplementedMockServiceServer) WrongProtocol(context.Context, *WrongProto
 func (UnimplementedMockServiceServer) ResetBeforeResponse(context.Context, *ResetRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResetBeforeResponse not implemented")
 }
-func (UnimplementedMockServiceServer) ResetAfterResponse(*StreamingResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error {
+func (UnimplementedMockServiceServer) ResetAfterResponse(*ResetRequest, grpc.ServerStreamingServer[ResetStreamResponse]) error {
 	return status.Error(codes.Unimplemented, "method ResetAfterResponse not implemented")
 }
 func (UnimplementedMockServiceServer) mustEmbedUnimplementedMockServiceServer() {}
@@ -456,11 +456,11 @@ func _MockService_ResetBeforeResponse_Handler(srv interface{}, ctx context.Conte
 }
 
 func _MockService_ResetAfterResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(StreamingResetRequest)
+	m := new(ResetRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(MockServiceServer).ResetAfterResponse(m, &grpc.GenericServerStream[StreamingResetRequest, ResetStreamResponse]{ServerStream: stream})
+	return srv.(MockServiceServer).ResetAfterResponse(m, &grpc.GenericServerStream[ResetRequest, ResetStreamResponse]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.

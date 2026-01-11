@@ -316,17 +316,14 @@ func (s *Server) ResetBeforeResponse(ctx context.Context, req *pb.ResetRequest) 
 	return nil, status.Errorf(codes.Aborted, "RST sent")
 }
 
-func (s *Server) ResetAfterResponse(req *pb.StreamingResetRequest, stream pb.MockService_ResetAfterResponseServer) error {
-	count := int(req.GetCount())
-	if count <= 0 {
-		count = 5
-	}
-	intervalMs := req.GetIntervalMs()
-	if intervalMs <= 0 {
-		intervalMs = 100
+func (s *Server) ResetAfterResponse(req *pb.ResetRequest, stream pb.MockService_ResetAfterResponseServer) error {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Streaming %d responses, then RST", s.ServiceName, count)
+	log.Printf("[%s] Sending dummy data after %dms, then RST", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	// Get connection for later reset
 	p, ok := peer.FromContext(stream.Context())
@@ -339,15 +336,12 @@ func (s *Server) ResetAfterResponse(req *pb.StreamingResetRequest, stream pb.Moc
 		return status.Errorf(codes.Internal, "connection not found")
 	}
 
-	// Stream responses
-	for i := 0; i < count; i++ {
-		if err := stream.Send(&pb.ResetStreamResponse{
-			Sequence: int32(i),
-			Data:     []byte(fmt.Sprintf("message %d", i)),
-		}); err != nil {
-			return err
-		}
-		time.Sleep(time.Duration(intervalMs) * time.Millisecond)
+	// Send dummy data
+	if err := stream.Send(&pb.ResetStreamResponse{
+		Sequence: 0,
+		Data:     []byte("dummy data"),
+	}); err != nil {
+		return err
 	}
 
 	// Force RST
@@ -358,5 +352,5 @@ func (s *Server) ResetAfterResponse(req *pb.StreamingResetRequest, stream pb.Moc
 	conn.Close()
 	s.tracker.remove(addr)
 
-	return status.Errorf(codes.Unavailable, "RST sent after %d messages", count)
+	return status.Errorf(codes.Unavailable, "RST sent after dummy data")
 }
