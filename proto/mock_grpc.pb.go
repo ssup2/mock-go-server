@@ -19,13 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	MockService_Health_FullMethodName              = "/mock.MockService/Health"
-	MockService_Ready_FullMethodName               = "/mock.MockService/Ready"
 	MockService_Status_FullMethodName              = "/mock.MockService/Status"
 	MockService_Delay_FullMethodName               = "/mock.MockService/Delay"
-	MockService_Headers_FullMethodName             = "/mock.MockService/Headers"
-	MockService_Large_FullMethodName               = "/mock.MockService/Large"
-	MockService_Echo_FullMethodName                = "/mock.MockService/Echo"
 	MockService_Disconnect_FullMethodName          = "/mock.MockService/Disconnect"
 	MockService_WrongProtocol_FullMethodName       = "/mock.MockService/WrongProtocol"
 	MockService_ResetBeforeResponse_FullMethodName = "/mock.MockService/ResetBeforeResponse"
@@ -36,19 +31,10 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MockServiceClient interface {
-	// Health check
-	Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HealthResponse, error)
-	Ready(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReadyResponse, error)
 	// Return specific status code
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	// Delay response
 	Delay(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*DelayResponse, error)
-	// Echo headers
-	Headers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HeadersResponse, error)
-	// Large response
-	Large(ctx context.Context, in *LargeRequest, opts ...grpc.CallOption) (*LargeResponse, error)
-	// Echo request body
-	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
 	// Server closes connection after delay
 	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Server sends wrong protocol data after delay
@@ -67,26 +53,6 @@ func NewMockServiceClient(cc grpc.ClientConnInterface) MockServiceClient {
 	return &mockServiceClient{cc}
 }
 
-func (c *mockServiceClient) Health(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HealthResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(HealthResponse)
-	err := c.cc.Invoke(ctx, MockService_Health_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mockServiceClient) Ready(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ReadyResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ReadyResponse)
-	err := c.cc.Invoke(ctx, MockService_Ready_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *mockServiceClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(StatusResponse)
@@ -101,36 +67,6 @@ func (c *mockServiceClient) Delay(ctx context.Context, in *DelayRequest, opts ..
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DelayResponse)
 	err := c.cc.Invoke(ctx, MockService_Delay_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mockServiceClient) Headers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HeadersResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(HeadersResponse)
-	err := c.cc.Invoke(ctx, MockService_Headers_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mockServiceClient) Large(ctx context.Context, in *LargeRequest, opts ...grpc.CallOption) (*LargeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LargeResponse)
-	err := c.cc.Invoke(ctx, MockService_Large_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *mockServiceClient) Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(EchoResponse)
-	err := c.cc.Invoke(ctx, MockService_Echo_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -190,19 +126,10 @@ type MockService_ResetAfterResponseClient = grpc.ServerStreamingClient[ResetStre
 // All implementations must embed UnimplementedMockServiceServer
 // for forward compatibility.
 type MockServiceServer interface {
-	// Health check
-	Health(context.Context, *Empty) (*HealthResponse, error)
-	Ready(context.Context, *Empty) (*ReadyResponse, error)
 	// Return specific status code
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	// Delay response
 	Delay(context.Context, *DelayRequest) (*DelayResponse, error)
-	// Echo headers
-	Headers(context.Context, *Empty) (*HeadersResponse, error)
-	// Large response
-	Large(context.Context, *LargeRequest) (*LargeResponse, error)
-	// Echo request body
-	Echo(context.Context, *EchoRequest) (*EchoResponse, error)
 	// Server closes connection after delay
 	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
 	// Server sends wrong protocol data after delay
@@ -221,26 +148,11 @@ type MockServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMockServiceServer struct{}
 
-func (UnimplementedMockServiceServer) Health(context.Context, *Empty) (*HealthResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Health not implemented")
-}
-func (UnimplementedMockServiceServer) Ready(context.Context, *Empty) (*ReadyResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Ready not implemented")
-}
 func (UnimplementedMockServiceServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Status not implemented")
 }
 func (UnimplementedMockServiceServer) Delay(context.Context, *DelayRequest) (*DelayResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delay not implemented")
-}
-func (UnimplementedMockServiceServer) Headers(context.Context, *Empty) (*HeadersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Headers not implemented")
-}
-func (UnimplementedMockServiceServer) Large(context.Context, *LargeRequest) (*LargeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Large not implemented")
-}
-func (UnimplementedMockServiceServer) Echo(context.Context, *EchoRequest) (*EchoResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Echo not implemented")
 }
 func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method Disconnect not implemented")
@@ -275,42 +187,6 @@ func RegisterMockServiceServer(s grpc.ServiceRegistrar, srv MockServiceServer) {
 	s.RegisterService(&MockService_ServiceDesc, srv)
 }
 
-func _MockService_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).Health(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_Health_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Health(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MockService_Ready_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).Ready(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_Ready_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Ready(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _MockService_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(StatusRequest)
 	if err := dec(in); err != nil {
@@ -343,60 +219,6 @@ func _MockService_Delay_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MockServiceServer).Delay(ctx, req.(*DelayRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MockService_Headers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).Headers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_Headers_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Headers(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MockService_Large_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LargeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).Large(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_Large_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Large(ctx, req.(*LargeRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _MockService_Echo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EchoRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MockServiceServer).Echo(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: MockService_Echo_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Echo(ctx, req.(*EchoRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -474,32 +296,12 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MockServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Health",
-			Handler:    _MockService_Health_Handler,
-		},
-		{
-			MethodName: "Ready",
-			Handler:    _MockService_Ready_Handler,
-		},
-		{
 			MethodName: "Status",
 			Handler:    _MockService_Status_Handler,
 		},
 		{
 			MethodName: "Delay",
 			Handler:    _MockService_Delay_Handler,
-		},
-		{
-			MethodName: "Headers",
-			Handler:    _MockService_Headers_Handler,
-		},
-		{
-			MethodName: "Large",
-			Handler:    _MockService_Large_Handler,
-		},
-		{
-			MethodName: "Echo",
-			Handler:    _MockService_Echo_Handler,
 		},
 		{
 			MethodName: "Disconnect",

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -31,16 +30,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/", s.rootHandler)
 	mux.HandleFunc("/status/", s.statusHandler)
 	mux.HandleFunc("/delay/", s.delayHandler)
-	mux.HandleFunc("/headers", s.headersHandler)
-	mux.HandleFunc("/large", s.largeResponseHandler)
-	mux.HandleFunc("/panic", s.panicHandler)
-	mux.HandleFunc("/echo", s.echoHandler)
 	mux.HandleFunc("/disconnect/", s.disconnectHandler)
 	mux.HandleFunc("/wrongprotocol/", s.wrongprotocolHandler)
 	mux.HandleFunc("/reset-before-response/", s.resetBeforeResponseHandler)
 	mux.HandleFunc("/reset-after-response/", s.resetAfterResponseHandler)
-	mux.HandleFunc("/health", s.healthHandler)
-	mux.HandleFunc("/ready", s.readyHandler)
 
 	s.server = &http.Server{
 		Addr:    ":" + s.Port,
@@ -74,45 +67,21 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 		"service": s.ServiceName,
 		"message": "Welcome to mock server for Istio/Envoy testing",
 		"http_endpoints": []string{
-			"/health - Health check",
-			"/ready - Readiness check",
 			"/status/{code} - Return specific HTTP status code",
 			"/delay/{ms} - Delay response by milliseconds",
-			"/headers - Echo all request headers",
-			"/large?size=1000 - Large response (size in KB)",
-			"/panic - Trigger panic (crash)",
-			"/echo - Echo request body",
 			"/disconnect/{ms} - Server closes connection after delay",
 			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
 			"/reset-before-response/{ms} - Server sends TCP RST before response after delay",
-			"/reset-after-response/{ms} - Server sends headers first, then TCP RST after delay",
+			"/reset-after-response/{ms} - Server sends dummy data first, then TCP RST after delay",
 		},
 		"grpc_methods": []string{
-			"Health - Health check",
-			"Ready - Readiness check",
 			"Status - Return specific gRPC status code",
 			"Delay - Delay response by milliseconds",
-			"Headers - Echo all request headers/metadata",
-			"Large - Large response (size in KB)",
-			"Echo - Echo request body",
+			"Disconnect - Server closes connection after delay",
 			"WrongProtocol - Server sends wrong protocol data after delay",
 			"ResetBeforeResponse - Server sends TCP RST before response after delay",
-			"ResetAfterResponse - Server sends headers first, then TCP RST after delay",
+			"ResetAfterResponse - Server sends dummy data first, then TCP RST after delay",
 		},
-	})
-}
-
-func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
-	s.respondJSON(w, http.StatusOK, map[string]string{
-		"status":  "healthy",
-		"service": s.ServiceName,
-	})
-}
-
-func (s *Server) readyHandler(w http.ResponseWriter, r *http.Request) {
-	s.respondJSON(w, http.StatusOK, map[string]string{
-		"status":  "ready",
-		"service": s.ServiceName,
 	})
 }
 
@@ -149,69 +118,6 @@ func (s *Server) delayHandler(w http.ResponseWriter, r *http.Request) {
 		"delayed_ms": ms,
 		"message":    fmt.Sprintf("Response delayed by %dms", ms),
 	})
-}
-
-func (s *Server) headersHandler(w http.ResponseWriter, r *http.Request) {
-	headers := make(map[string][]string)
-	for key, values := range r.Header {
-		headers[key] = values
-	}
-
-	s.respondJSON(w, http.StatusOK, map[string]interface{}{
-		"service": s.ServiceName,
-		"headers": headers,
-		"method":  r.Method,
-		"url":     r.URL.String(),
-		"host":    r.Host,
-	})
-}
-
-func (s *Server) largeResponseHandler(w http.ResponseWriter, r *http.Request) {
-	sizeStr := r.URL.Query().Get("size")
-	size := 1000
-	if sizeStr != "" {
-		if parsed, err := strconv.Atoi(sizeStr); err == nil {
-			size = parsed
-		}
-	}
-
-	if size > 100*1024 {
-		size = 100 * 1024
-	}
-
-	data := make([]byte, size*1024)
-	for i := range data {
-		data[i] = byte('A' + (i % 26))
-	}
-
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Length", strconv.Itoa(len(data)))
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
-}
-
-func (s *Server) panicHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("[%s] Panic triggered!", s.ServiceName)
-	panic("Intentional panic for testing")
-}
-
-func (s *Server) echoHandler(w http.ResponseWriter, r *http.Request) {
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Failed to read request body",
-		})
-		return
-	}
-
-	contentType := r.Header.Get("Content-Type")
-	if contentType == "" {
-		contentType = "application/octet-stream"
-	}
-
-	w.Header().Set("Content-Type", contentType)
-	w.WriteHeader(http.StatusOK)
-	w.Write(body)
 }
 
 func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
