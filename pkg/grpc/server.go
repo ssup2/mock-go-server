@@ -344,6 +344,9 @@ func (s *Server) ResetAfterResponse(req *pb.ResetRequest, stream pb.MockService_
 		return err
 	}
 
+	// Wait for data to be flushed before RST
+	time.Sleep(100 * time.Millisecond)
+
 	// Force RST
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
 		tcpConn.SetLinger(0)
