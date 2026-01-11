@@ -30,7 +30,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/", s.rootHandler)
 	mux.HandleFunc("/status/", s.statusHandler)
 	mux.HandleFunc("/delay/", s.delayHandler)
-	mux.HandleFunc("/disconnect/", s.disconnectHandler)
+	mux.HandleFunc("/close-before-response/", s.closeBeforeResponseHandler)
+	mux.HandleFunc("/close-after-response/", s.closeAfterResponseHandler)
 	mux.HandleFunc("/wrongprotocol/", s.wrongprotocolHandler)
 	mux.HandleFunc("/reset-before-response/", s.resetBeforeResponseHandler)
 	mux.HandleFunc("/reset-after-response/", s.resetAfterResponseHandler)
@@ -69,18 +70,20 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 		"http_endpoints": []string{
 			"/status/{code} - Return specific HTTP status code",
 			"/delay/{ms} - Delay response by milliseconds",
-			"/disconnect/{ms} - Server closes connection after delay",
+			"/close-before-response/{ms} - Server closes connection before response",
+			"/close-after-response/{ms} - Server sends dummy data, then closes connection",
 			"/wrongprotocol/{ms} - Server sends wrong protocol data after delay",
-			"/reset-before-response/{ms} - Server sends TCP RST before response after delay",
-			"/reset-after-response/{ms} - Server sends dummy data first, then TCP RST after delay",
+			"/reset-before-response/{ms} - Server sends TCP RST before response",
+			"/reset-after-response/{ms} - Server sends dummy data, then TCP RST",
 		},
 		"grpc_methods": []string{
 			"Status - Return specific gRPC status code",
 			"Delay - Delay response by milliseconds",
-			"Disconnect - Server closes connection after delay",
+			"CloseBeforeResponse - Server closes connection before response",
+			"CloseAfterResponse - Server sends dummy data, then closes connection",
 			"WrongProtocol - Server sends wrong protocol data after delay",
-			"ResetBeforeResponse - Server sends TCP RST before response after delay",
-			"ResetAfterResponse - Server sends dummy data first, then TCP RST after delay",
+			"ResetBeforeResponse - Server sends TCP RST before response",
+			"ResetAfterResponse - Server sends dummy data, then TCP RST",
 		},
 	})
 }
@@ -120,17 +123,17 @@ func (s *Server) delayHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
-	msStr := r.URL.Path[len("/disconnect/"):]
+func (s *Server) closeBeforeResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/close-before-response/"):]
 	ms, err := strconv.Atoi(msStr)
 	if err != nil || ms < 0 {
 		s.respondJSON(w, http.StatusBadRequest, map[string]string{
-			"error": "Invalid delay. Use /disconnect/{milliseconds}",
+			"error": "Invalid delay. Use /close-before-response/{milliseconds}",
 		})
 		return
 	}
 
-	log.Printf("[%s] Disconnecting client connection after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Closing connection before response after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	hijacker, ok := w.(http.Hijacker)
@@ -145,6 +148,48 @@ func (s *Server) disconnectHandler(w http.ResponseWriter, r *http.Request) {
 		s.respondJSON(w, http.StatusInternalServerError, map[string]string{
 			"error": err.Error(),
 		})
+		return
+	}
+	conn.Close()
+}
+
+func (s *Server) closeAfterResponseHandler(w http.ResponseWriter, r *http.Request) {
+	msStr := r.URL.Path[len("/close-after-response/"):]
+	ms, err := strconv.Atoi(msStr)
+	if err != nil || ms < 0 {
+		s.respondJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "Invalid delay. Use /close-after-response/{milliseconds}",
+		})
+		return
+	}
+
+	log.Printf("[%s] Sending dummy data after %dms, then closing connection", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	// Send response headers and body first
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusOK)
+
+	dummyData := []byte("dummy data")
+	if _, err := w.Write(dummyData); err != nil {
+		log.Printf("[%s] Failed to write dummy data: %v", s.ServiceName, err)
+		return
+	}
+
+	// Flush response data
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+
+	time.Sleep(100 * time.Millisecond)
+
+	// Then hijack and close
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		return
+	}
+	conn, _, err := hijacker.Hijack()
+	if err != nil {
 		return
 	}
 	conn.Close()

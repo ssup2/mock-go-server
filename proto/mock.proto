@@ -11,8 +11,11 @@ service MockService {
   // Delay response
   rpc Delay(DelayRequest) returns (DelayResponse);
 
-  // Server closes connection after delay
-  rpc Disconnect(DisconnectRequest) returns (Empty);
+  // Server closes connection before response after delay
+  rpc CloseBeforeResponse(CloseRequest) returns (Empty);
+
+  // Server sends dummy data, then closes connection
+  rpc CloseAfterResponse(CloseRequest) returns (stream CloseStreamResponse);
 
   // Server sends wrong protocol data after delay
   rpc WrongProtocol(WrongProtocolRequest) returns (Empty);
@@ -24,8 +27,13 @@ service MockService {
   rpc ResetAfterResponse(ResetRequest) returns (stream ResetStreamResponse);
 }
 
-message DisconnectRequest {
+message CloseRequest {
   int32 milliseconds = 1;
+}
+
+message CloseStreamResponse {
+  int32 sequence = 1;
+  bytes data = 2;
 }
 
 message WrongProtocolRequest {

@@ -171,23 +171,67 @@ func (s *Server) Delay(ctx context.Context, req *pb.DelayRequest) (*pb.DelayResp
 	}, nil
 }
 
-func (s *Server) Disconnect(ctx context.Context, req *pb.DisconnectRequest) (*pb.Empty, error) {
+func (s *Server) CloseBeforeResponse(ctx context.Context, req *pb.CloseRequest) (*pb.Empty, error) {
 	ms := req.GetMilliseconds()
 	if ms < 0 {
 		return nil, status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
 	}
 
-	log.Printf("[%s] Disconnecting client connection after %dms", s.ServiceName, ms)
+	log.Printf("[%s] Closing connection before response after %dms", s.ServiceName, ms)
 	time.Sleep(time.Duration(ms) * time.Millisecond)
 
 	p, ok := peer.FromContext(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Internal, "failed to get peer info")
 	}
-	if conn, ok := p.Addr.(interface{ Close() error }); ok {
-		conn.Close()
+
+	addr := p.Addr.String()
+	conn, ok := s.tracker.get(addr)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "connection not found")
 	}
+
+	conn.Close()
+	s.tracker.remove(addr)
+
 	return nil, status.Errorf(codes.Unavailable, "connection closed by server")
+}
+
+func (s *Server) CloseAfterResponse(req *pb.CloseRequest, stream pb.MockService_CloseAfterResponseServer) error {
+	ms := req.GetMilliseconds()
+	if ms < 0 {
+		return status.Errorf(codes.InvalidArgument, "Invalid delay: must be >= 0")
+	}
+
+	log.Printf("[%s] Sending dummy data after %dms, then closing connection", s.ServiceName, ms)
+	time.Sleep(time.Duration(ms) * time.Millisecond)
+
+	p, ok := peer.FromContext(stream.Context())
+	if !ok {
+		return status.Errorf(codes.Internal, "failed to get peer info")
+	}
+
+	addr := p.Addr.String()
+	conn, ok := s.tracker.get(addr)
+	if !ok {
+		return status.Errorf(codes.Internal, "connection not found")
+	}
+
+	// Send dummy data
+	if err := stream.Send(&pb.CloseStreamResponse{
+		Sequence: 0,
+		Data:     []byte("dummy data"),
+	}); err != nil {
+		return err
+	}
+
+	// Wait for data to be flushed
+	time.Sleep(100 * time.Millisecond)
+
+	conn.Close()
+	s.tracker.remove(addr)
+
+	return status.Errorf(codes.Unavailable, "connection closed after dummy data")
 }
 
 func (s *Server) WrongProtocol(ctx context.Context, req *pb.WrongProtocolRequest) (*pb.Empty, error) {

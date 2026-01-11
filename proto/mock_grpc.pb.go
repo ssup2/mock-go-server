@@ -21,7 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	MockService_Status_FullMethodName              = "/mock.MockService/Status"
 	MockService_Delay_FullMethodName               = "/mock.MockService/Delay"
-	MockService_Disconnect_FullMethodName          = "/mock.MockService/Disconnect"
+	MockService_CloseBeforeResponse_FullMethodName = "/mock.MockService/CloseBeforeResponse"
+	MockService_CloseAfterResponse_FullMethodName  = "/mock.MockService/CloseAfterResponse"
 	MockService_WrongProtocol_FullMethodName       = "/mock.MockService/WrongProtocol"
 	MockService_ResetBeforeResponse_FullMethodName = "/mock.MockService/ResetBeforeResponse"
 	MockService_ResetAfterResponse_FullMethodName  = "/mock.MockService/ResetAfterResponse"
@@ -35,8 +36,10 @@ type MockServiceClient interface {
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	// Delay response
 	Delay(ctx context.Context, in *DelayRequest, opts ...grpc.CallOption) (*DelayResponse, error)
-	// Server closes connection after delay
-	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Server closes connection before response after delay
+	CloseBeforeResponse(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*Empty, error)
+	// Server sends dummy data, then closes connection
+	CloseAfterResponse(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CloseStreamResponse], error)
 	// Server sends wrong protocol data after delay
 	WrongProtocol(ctx context.Context, in *WrongProtocolRequest, opts ...grpc.CallOption) (*Empty, error)
 	// Server sends RST before response after delay
@@ -73,15 +76,34 @@ func (c *mockServiceClient) Delay(ctx context.Context, in *DelayRequest, opts ..
 	return out, nil
 }
 
-func (c *mockServiceClient) Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*Empty, error) {
+func (c *mockServiceClient) CloseBeforeResponse(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
-	err := c.cc.Invoke(ctx, MockService_Disconnect_FullMethodName, in, out, cOpts...)
+	err := c.cc.Invoke(ctx, MockService_CloseBeforeResponse_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
+
+func (c *mockServiceClient) CloseAfterResponse(ctx context.Context, in *CloseRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CloseStreamResponse], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[0], MockService_CloseAfterResponse_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[CloseRequest, CloseStreamResponse]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MockService_CloseAfterResponseClient = grpc.ServerStreamingClient[CloseStreamResponse]
 
 func (c *mockServiceClient) WrongProtocol(ctx context.Context, in *WrongProtocolRequest, opts ...grpc.CallOption) (*Empty, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
@@ -105,7 +127,7 @@ func (c *mockServiceClient) ResetBeforeResponse(ctx context.Context, in *ResetRe
 
 func (c *mockServiceClient) ResetAfterResponse(ctx context.Context, in *ResetRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ResetStreamResponse], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[0], MockService_ResetAfterResponse_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &MockService_ServiceDesc.Streams[1], MockService_ResetAfterResponse_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +152,10 @@ type MockServiceServer interface {
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	// Delay response
 	Delay(context.Context, *DelayRequest) (*DelayResponse, error)
-	// Server closes connection after delay
-	Disconnect(context.Context, *DisconnectRequest) (*Empty, error)
+	// Server closes connection before response after delay
+	CloseBeforeResponse(context.Context, *CloseRequest) (*Empty, error)
+	// Server sends dummy data, then closes connection
+	CloseAfterResponse(*CloseRequest, grpc.ServerStreamingServer[CloseStreamResponse]) error
 	// Server sends wrong protocol data after delay
 	WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error)
 	// Server sends RST before response after delay
@@ -154,8 +178,11 @@ func (UnimplementedMockServiceServer) Status(context.Context, *StatusRequest) (*
 func (UnimplementedMockServiceServer) Delay(context.Context, *DelayRequest) (*DelayResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Delay not implemented")
 }
-func (UnimplementedMockServiceServer) Disconnect(context.Context, *DisconnectRequest) (*Empty, error) {
-	return nil, status.Error(codes.Unimplemented, "method Disconnect not implemented")
+func (UnimplementedMockServiceServer) CloseBeforeResponse(context.Context, *CloseRequest) (*Empty, error) {
+	return nil, status.Error(codes.Unimplemented, "method CloseBeforeResponse not implemented")
+}
+func (UnimplementedMockServiceServer) CloseAfterResponse(*CloseRequest, grpc.ServerStreamingServer[CloseStreamResponse]) error {
+	return status.Error(codes.Unimplemented, "method CloseAfterResponse not implemented")
 }
 func (UnimplementedMockServiceServer) WrongProtocol(context.Context, *WrongProtocolRequest) (*Empty, error) {
 	return nil, status.Error(codes.Unimplemented, "method WrongProtocol not implemented")
@@ -223,23 +250,34 @@ func _MockService_Delay_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _MockService_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DisconnectRequest)
+func _MockService_CloseBeforeResponse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CloseRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MockServiceServer).Disconnect(ctx, in)
+		return srv.(MockServiceServer).CloseBeforeResponse(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: MockService_Disconnect_FullMethodName,
+		FullMethod: MockService_CloseBeforeResponse_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MockServiceServer).Disconnect(ctx, req.(*DisconnectRequest))
+		return srv.(MockServiceServer).CloseBeforeResponse(ctx, req.(*CloseRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
+
+func _MockService_CloseAfterResponse_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(CloseRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(MockServiceServer).CloseAfterResponse(m, &grpc.GenericServerStream[CloseRequest, CloseStreamResponse]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type MockService_CloseAfterResponseServer = grpc.ServerStreamingServer[CloseStreamResponse]
 
 func _MockService_WrongProtocol_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WrongProtocolRequest)
@@ -304,8 +342,8 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _MockService_Delay_Handler,
 		},
 		{
-			MethodName: "Disconnect",
-			Handler:    _MockService_Disconnect_Handler,
+			MethodName: "CloseBeforeResponse",
+			Handler:    _MockService_CloseBeforeResponse_Handler,
 		},
 		{
 			MethodName: "WrongProtocol",
@@ -317,6 +355,11 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "CloseAfterResponse",
+			Handler:       _MockService_CloseAfterResponse_Handler,
+			ServerStreams: true,
+		},
 		{
 			StreamName:    "ResetAfterResponse",
 			Handler:       _MockService_ResetAfterResponse_Handler,
