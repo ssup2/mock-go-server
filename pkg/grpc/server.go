@@ -83,14 +83,16 @@ type Server struct {
 	pb.UnimplementedMockServiceServer
 	ServiceName string
 	Port        string
+	AppVersion  string
 	grpcServer  *grpc.Server
 	tracker     *connTracker
 }
 
-func NewServer(serviceName, port string) *Server {
+func NewServer(serviceName, port, version string) *Server {
 	return &Server{
 		ServiceName: serviceName,
 		Port:        port,
+		AppVersion:  version,
 		tracker:     newConnTracker(),
 	}
 }
@@ -140,6 +142,13 @@ func (s *Server) loggingInterceptor(ctx context.Context, req interface{}, info *
 	resp, err := handler(ctx, req)
 	log.Printf("[%s] gRPC %s completed in %v", s.ServiceName, info.FullMethod, time.Since(start))
 	return resp, err
+}
+
+func (s *Server) Version(ctx context.Context, req *pb.Empty) (*pb.VersionResponse, error) {
+	return &pb.VersionResponse{
+		Service: s.ServiceName,
+		Version: s.AppVersion,
+	}, nil
 }
 
 func (s *Server) Status(ctx context.Context, req *pb.StatusRequest) (*pb.StatusResponse, error) {

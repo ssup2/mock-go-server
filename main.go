@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	version     = "dev"
 	serviceName = getEnv("SERVICE_NAME", "mock-server")
 	httpPort    = getEnv("HTTP_PORT", "8080")
 	grpcPort    = getEnv("GRPC_PORT", "9090")
@@ -28,7 +29,7 @@ func getEnv(key, defaultValue string) string {
 
 func main() {
 	// Start HTTP server
-	http := httpserver.NewServer(serviceName, httpPort)
+	http := httpserver.NewServer(serviceName, httpPort, version)
 	go func() {
 		if err := http.Start(); err != nil && err.Error() != "http: Server closed" {
 			log.Fatalf("HTTP server error: %v", err)
@@ -36,7 +37,7 @@ func main() {
 	}()
 
 	// Start gRPC server
-	grpc := grpcserver.NewServer(serviceName, grpcPort)
+	grpc := grpcserver.NewServer(serviceName, grpcPort, version)
 	go func() {
 		if err := grpc.Start(); err != nil {
 			log.Fatalf("gRPC server error: %v", err)

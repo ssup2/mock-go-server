@@ -14,13 +14,15 @@ import (
 type Server struct {
 	ServiceName string
 	Port        string
+	Version     string
 	server      *http.Server
 }
 
-func NewServer(serviceName, port string) *Server {
+func NewServer(serviceName, port, version string) *Server {
 	return &Server{
 		ServiceName: serviceName,
 		Port:        port,
+		Version:     version,
 	}
 }
 
@@ -28,6 +30,7 @@ func (s *Server) Start() error {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", s.rootHandler)
+	mux.HandleFunc("/version", s.versionHandler)
 	mux.HandleFunc("/status/", s.statusHandler)
 	mux.HandleFunc("/delay/", s.delayHandler)
 	mux.HandleFunc("/close-before-response/", s.closeBeforeResponseHandler)
@@ -59,6 +62,13 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func (s *Server) versionHandler(w http.ResponseWriter, r *http.Request) {
+	s.respondJSON(w, http.StatusOK, map[string]string{
+		"service": s.ServiceName,
+		"version": s.Version,
+	})
+}
+
 func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -68,6 +78,7 @@ func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
 		"service": s.ServiceName,
 		"message": "Welcome to mock server for Istio/Envoy testing",
 		"http_endpoints": []string{
+			"/version - Return server version",
 			"/status/{code} - Return specific HTTP status code",
 			"/delay/{ms} - Delay response by milliseconds",
 			"/close-before-response/{ms} - Server closes connection before response",

@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	MockService_Version_FullMethodName             = "/mock.MockService/Version"
 	MockService_Status_FullMethodName              = "/mock.MockService/Status"
 	MockService_Delay_FullMethodName               = "/mock.MockService/Delay"
 	MockService_CloseBeforeResponse_FullMethodName = "/mock.MockService/CloseBeforeResponse"
@@ -32,6 +33,8 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MockServiceClient interface {
+	// Return server version
+	Version(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionResponse, error)
 	// Return specific status code
 	Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error)
 	// Delay response
@@ -54,6 +57,16 @@ type mockServiceClient struct {
 
 func NewMockServiceClient(cc grpc.ClientConnInterface) MockServiceClient {
 	return &mockServiceClient{cc}
+}
+
+func (c *mockServiceClient) Version(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*VersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VersionResponse)
+	err := c.cc.Invoke(ctx, MockService_Version_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *mockServiceClient) Status(ctx context.Context, in *StatusRequest, opts ...grpc.CallOption) (*StatusResponse, error) {
@@ -148,6 +161,8 @@ type MockService_ResetAfterResponseClient = grpc.ServerStreamingClient[ResetStre
 // All implementations must embed UnimplementedMockServiceServer
 // for forward compatibility.
 type MockServiceServer interface {
+	// Return server version
+	Version(context.Context, *Empty) (*VersionResponse, error)
 	// Return specific status code
 	Status(context.Context, *StatusRequest) (*StatusResponse, error)
 	// Delay response
@@ -172,6 +187,9 @@ type MockServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMockServiceServer struct{}
 
+func (UnimplementedMockServiceServer) Version(context.Context, *Empty) (*VersionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Version not implemented")
+}
 func (UnimplementedMockServiceServer) Status(context.Context, *StatusRequest) (*StatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Status not implemented")
 }
@@ -212,6 +230,24 @@ func RegisterMockServiceServer(s grpc.ServiceRegistrar, srv MockServiceServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&MockService_ServiceDesc, srv)
+}
+
+func _MockService_Version_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MockServiceServer).Version(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MockService_Version_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MockServiceServer).Version(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _MockService_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -333,6 +369,10 @@ var MockService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "mock.MockService",
 	HandlerType: (*MockServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Version",
+			Handler:    _MockService_Version_Handler,
+		},
 		{
 			MethodName: "Status",
 			Handler:    _MockService_Status_Handler,

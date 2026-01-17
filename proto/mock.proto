@@ -5,6 +5,9 @@ package mock;
 option go_package = "mock-go-server/proto";
 
 service MockService {
+  // Return server version
+  rpc Version(Empty) returns (VersionResponse);
+
   // Return specific status code
   rpc Status(StatusRequest) returns (StatusResponse);
 
@@ -50,6 +53,11 @@ message ResetStreamResponse {
 }
 
 message Empty {}
+
+message VersionResponse {
+  string service = 1;
+  string version = 2;
+}
 
 message StatusRequest {
   int32 code = 1;
